@@ -1,0 +1,72 @@
+# ── Secrets & local config (never commit) ──
+.env
+.env.*
+!.env.example
+**/.env
+!**/.env.example
+devkit/devkit.env
+**/devkit.env
+!**/devkit.env.example
+autoqa-loop/autoqa.config.local.ts
+autoqa-loop/storage-state.json
+**/config.local.*
+**/secrets.*
+**/credentials.*
+
+# Telegram / device runtime
+inbox/
+*.pid
+devkit/.ios-proxy.pid
+devkit/.ios-proxy.log
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+.venv/
+**/.venv*/
+venv/
+ioskit/.venv-pymd/
+
+# Node (autoqa-loop, WebDriverAgent dev)
+**/node_modules/
+**/.npm/
+**/dist/
+**/build/
+
+# autoqa-loop runtime artifacts
+autoqa-loop/artifacts/
+autoqa-loop/data/*.db
+autoqa-loop/data/*.db-*
+autoqa-loop/tickets/*.md
+autoqa-loop/.env
+
+# adbkit user cache (vendor/platform-tools IS committed for offline use)
+.adbkit/
+**/.adbkit/
+
+# macOS / editor
+.DS_Store
+**/.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs & temp
+*.log
+**/tmp/
+**/.cache/
+
+# Screenshots / dumps (local QA)
+screenshots/
+artifacts/
+
+# Xcode / iOS build (local)
+**/DerivedData/
+**/*.xcuserstate
+**/*.xcuserdata/

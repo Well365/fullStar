@@ -1,0 +1,357 @@
+#!/usr/bin/env python3
+"""Poll iTerm session output and send Claude Code assistant replies to Telegram."""
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+ITERM_SHOT = ROOT / "term-bridge" / "iterm-screenshot.py"
+CAPTURE = ROOT / "term-bridge" / "iterm-capture.py"
+
+sys.path.insert(0, str(ROOT / "term-bridge"))
+from iterm_extract import (  # noqa: E402
+    extract_latest_reply,
+    is_reply_complete,
+    normalize_for_stable_compare,
+)
+from iterm_target import resolve_target  # noqa: E402
+
+
+def _monitor_file(kind: str) -> Path:
+    return ROOT / "inbox" / f"iterm-monitor-{resolve_target().log_suffix()}.{kind}"
+
+
+
+def _load_env() -> None:
+    env_path = ROOT / ".env"
+    if os.environ.get("TGKIT_ENV_FILE"):
+        env_path = Path(os.environ["TGKIT_ENV_FILE"])
+    if not env_path.is_file():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, _, v = line.partition("=")
+        os.environ.setdefault(k.strip(), v.strip().strip("'\""))
+
+
+def _resolve_monitor_target() -> tuple[str | None, int | None, str | None]:
+    """Same bot as tg-relay (@landpage_ipa_addr_bot): TELEGRAM_BOT_TOKEN + private TELEGRAM_CHAT_ID."""
+    token = (
+        os.environ.get("TG_ITERM_MONITOR_BOT_TOKEN", "").strip()
+        or os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    )
+    chat_raw = (
+        os.environ.get("TG_ITERM_MONITOR_CHAT_ID", "").strip()
+        or os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    )
+    if not token:
+        return None, None, "TELEGRAM_BOT_TOKEN not set (@landpage_ipa_addr_bot)"
+    if not chat_raw:
+        return None, None, (
+            "TELEGRAM_CHAT_ID not set — use your private chat id with @landpage_ipa_addr_bot "
+            "(positive number, not a group)"
+        )
+    try:
+        chat_id = int(chat_raw)
+    except ValueError:
+        return None, None, f"invalid chat id: {chat_raw}"
+    if chat_id < 0:
+        return (
+            None,
+            None,
+            "TELEGRAM_CHAT_ID is a group (negative). Use private chat with @landpage_ipa_addr_bot "
+            "(positive number).",
+        )
+    return token, chat_id, None
+
+
+def _capture_tail(lines: int) -> tuple[int, str]:
+    cmd = [sys.executable, str(CAPTURE)]
+    if lines > 0:
+        cmd.extend(["--tail", str(lines)])
+    r = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=45,
+    )
+    out = ((r.stdout or "") + (r.stderr or "")).strip()
+    return r.returncode, out
+
+
+def _read_state() -> str:
+    p = _monitor_file("state")
+    if p.is_file():
+        return p.read_text(encoding="utf-8")
+    return ""
+
+
+def _write_state(text: str) -> None:
+    p = _monitor_file("state")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="utf-8")
+
+
+def _read_last_sent() -> str:
+    p = _monitor_file("last-sent")
+    if p.is_file():
+        return p.read_text(encoding="utf-8")
+    return ""
+
+
+def _write_last_sent(text: str) -> None:
+    p = _monitor_file("last-sent")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="utf-8")
+
+
+
+def _read_last_sent_at() -> float:
+    p = _monitor_file("last-sent-at")
+    if p.is_file():
+        try:
+            return float(_monitor_file("last-sent-at").read_text(encoding="utf-8").strip())
+        except ValueError:
+            pass
+    return 0.0
+
+
+def _write_last_sent_at(ts: float) -> None:
+    p = _monitor_file("last-sent-at")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(str(ts), encoding="utf-8")
+
+
+def _screenshot_idle_seconds() -> float:
+    raw = os.environ.get("TG_ITERM_MONITOR_SCREENSHOT_IDLE", "60").strip()
+    if raw.lower() in ("", "0", "false", "no", "off"):
+        return 0.0
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return 60.0
+
+
+def _screenshot_marked_for_turn(sent_at: float) -> bool:
+    if sent_at <= 0 or not _monitor_file("screenshot-mark").is_file():
+        return False
+    try:
+        return float(_monitor_file("screenshot-mark").read_text(encoding="utf-8").strip()) >= sent_at
+    except ValueError:
+        return False
+
+
+def _mark_screenshot_for_turn(sent_at: float) -> None:
+    p = _monitor_file("screenshot-mark")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(str(sent_at), encoding="utf-8")
+
+
+def _send_iterm_screenshot() -> tuple[int, str]:
+    cap = os.environ.get(
+        "TG_ITERM_SCREENSHOT_CAPTION",
+        "iTerm · 1 分钟内无新输出",
+    ).strip() or "iTerm"
+    r = subprocess.run(
+        [sys.executable, str(ITERM_SHOT), "--caption", cap],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        env=os.environ.copy(),
+    )
+    out = ((r.stdout or "") + (r.stderr or "")).strip()
+    if r.returncode == 0:
+        return 0, out or "screenshot sent"
+    return r.returncode, out or "screenshot failed"
+
+def _send_tg(text: str) -> tuple[int, str]:
+    text = text.strip()
+    if not text:
+        return 0, "skip empty"
+    if len(text) > 3900:
+        text = "…\n" + text[-3900:]
+
+    token, chat_id, err = _resolve_monitor_target()
+    if err:
+        return 1, err
+
+    env = {**os.environ, "TELEGRAM_BOT_TOKEN": token or ""}
+    cmd = ["tg-notify", "send", "--chat-id", str(chat_id), text]
+    r = subprocess.run(
+        cmd,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=env,
+    )
+    out = ((r.stdout or "") + (r.stderr or "")).strip()
+    if r.returncode == 0:
+        return 0, f"sent to private chat {chat_id} ({out or 'ok'})"
+    return r.returncode, out
+
+
+def _maybe_send_reply(capture: str, *, force: bool = False) -> tuple[int, str]:
+    reply = extract_latest_reply(capture)
+    if not reply:
+        return 0, "no assistant reply"
+
+    last_sent = _read_last_sent()
+    if not force and reply == last_sent:
+        return 0, "already sent"
+
+    code, msg = _send_tg(reply)
+    if code == 0:
+        _write_last_sent(reply)
+        _write_last_sent_at(time.time())
+    return code, msg or "sent"
+
+
+def poll_once(*, tail_lines: int, force: bool = False) -> tuple[int, str]:
+    code, current = _capture_tail(tail_lines)
+    if code != 0:
+        return code, current
+
+    prev = _read_state()
+    if not force and current == prev:
+        return 0, "no change"
+
+    _write_state(current)
+    return _maybe_send_reply(current, force=force)
+
+
+def run_loop(*, interval: float, tail_lines: int, once: bool) -> int:
+    _load_env()
+    _, chat_id, err = _resolve_monitor_target()
+    if err:
+        print(f"iterm-monitor: config error: {err}", flush=True)
+        return 1
+    stable_polls = max(1, int(os.environ.get("TG_ITERM_MONITOR_STABLE_POLLS", "2")))
+    screenshot_idle = _screenshot_idle_seconds()
+    target = resolve_target()
+    print(
+        f"iterm-monitor: @landpage_ipa_addr_bot private chat_id={chat_id} "
+        f"target={target.label()} tail={tail_lines} interval={interval}s "
+        f"stable_polls={stable_polls} screenshot_idle={screenshot_idle}s",
+        flush=True,
+    )
+    last_capture = ""
+    last_stable = ""
+    stable_count = 0
+    last_seen_reply = _read_last_sent()
+    last_extract_change_at = _read_last_sent_at() or time.time()
+    while True:
+        code, current = _capture_tail(tail_lines)
+        ts = time.strftime("%H:%M:%S")
+        if code != 0:
+            print(f"[{ts}] error: {code} {current}", flush=True)
+            if once:
+                return 1
+            time.sleep(interval)
+            continue
+
+        stable_key = normalize_for_stable_compare(current)
+        complete = is_reply_complete(current)
+
+        if stable_key != last_stable:
+            last_capture = current
+            last_stable = stable_key
+            stable_count = 0
+            _write_state(current)
+        else:
+            stable_count += 1
+
+        reply_now = extract_latest_reply(current)
+        if reply_now != last_seen_reply:
+            last_seen_reply = reply_now
+            last_extract_change_at = time.time()
+
+        ready = complete or stable_count >= stable_polls
+        if ready:
+            send_code, msg = _maybe_send_reply(current)
+            if send_code != 0:
+                print(f"[{ts}] error: {msg}", flush=True)
+            elif msg == "no assistant reply":
+                if complete:
+                    print(f"[{ts}] warn: output complete but could not extract reply", flush=True)
+            elif msg != "already sent":
+                print(f"[{ts}] {msg}", flush=True)
+            stable_count = 0
+
+        if screenshot_idle > 0:
+            last_sent_at = _read_last_sent_at()
+            if last_sent_at > 0:
+                now = time.time()
+                since_send = now - last_sent_at
+                since_extract = now - last_extract_change_at
+                if (
+                    since_send >= screenshot_idle
+                    and since_extract >= screenshot_idle
+                    and not _screenshot_marked_for_turn(last_sent_at)
+                ):
+                    # Re-try text extract before screenshot (marker format may have changed)
+                    retry_code, retry_msg = _maybe_send_reply(current)
+                    if retry_code == 0 and retry_msg not in (
+                        "no assistant reply",
+                        "already sent",
+                    ):
+                        print(f"[{ts}] {retry_msg} (before screenshot)", flush=True)
+                        stable_count = 0
+                        if once:
+                            return 0
+                        time.sleep(interval)
+                        continue
+                    shot_code, shot_msg = _send_iterm_screenshot()
+                    if shot_code == 0:
+                        _mark_screenshot_for_turn(last_sent_at)
+                        print(f"[{ts}] screenshot: {shot_msg}", flush=True)
+                    else:
+                        print(f"[{ts}] screenshot error: {shot_msg}", flush=True)
+
+        if once:
+            return 0
+        time.sleep(interval)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Monitor iTerm output -> Telegram (assistant reply only)")
+    parser.add_argument("--interval", type=float, default=float(os.environ.get("TG_ITERM_MONITOR_INTERVAL", "5")))
+    parser.add_argument("--tail", type=int, default=int(os.environ.get("TG_ITERM_MONITOR_TAIL", "0")))
+    parser.add_argument("--once", action="store_true", help="Poll once and exit")
+    parser.add_argument("--force", action="store_true", help="Send even if unchanged")
+    parser.add_argument("--reset", action="store_true", help="Clear state file")
+    args = parser.parse_args()
+
+    if args.reset:
+        from iterm_log_buffer import reset as reset_log_buffer
+        for kind in ("state", "last-sent", "last-sent-at", "screenshot-mark"):
+            p = _monitor_file(kind)
+            if p.is_file():
+                p.unlink()
+        reset_log_buffer()
+        print("state cleared (incl. session log buffer)")
+        return 0
+
+    if args.once or args.force:
+        _load_env()
+        code, msg = poll_once(tail_lines=args.tail, force=args.force)
+        print(msg)
+        return 0 if code == 0 else 1
+
+    try:
+        return run_loop(interval=args.interval, tail_lines=args.tail, once=False)
+    except KeyboardInterrupt:
+        print("\nstopped")
+        return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

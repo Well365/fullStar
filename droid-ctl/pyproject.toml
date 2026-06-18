@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "droid-ctl"
+version = "0.2.0"
+description = "Android device control via ADB with bundled platform-tools"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+droid-ctl = "droid_ctl.cli:main"
+adbkit = "droid_ctl.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["droid_ctl*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# devkit entry — dispatch subcommands
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS="$ROOT/scripts"
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+  setup|install)
+    exec "$SCRIPTS/setup-all.sh" "$@"
+    ;;
+  check|doctor)
+    exec "$SCRIPTS/check-env.sh" "$@"
+    ;;
+  ios-start|ios-proxy)
+    exec "$SCRIPTS/start-ios-proxy.sh" "$@"
+    ;;
+  ios-stop)
+    exec "$SCRIPTS/stop-ios-proxy.sh" "$@"
+    ;;
+  build-wda)
+    exec "$SCRIPTS/build-wda.sh" "$@"
+    ;;
+  shot-android|android-shot)
+    exec "$SCRIPTS/shot-android.sh" "$@"
+    ;;
+  shot-ios|ios-shot)
+    exec "$SCRIPTS/shot-ios.sh" "$@"
+    ;;
+  ""|help|-h|--help)
+    cat <<'EOF'
+devkit — one-click mobile ops (Telegram + Android + iOS)
+
+Usage: ./mob-compose/<command> [options]
+
+Commands:
+  setup          Install tg-notify, adbkit, ioskit, skills, .env
+  check          Health check all tools and devices
+  ios-start      Start iproxy for WDA (background)
+  ios-stop       Stop iproxy
+  build-wda      xcodebuild WDA (needs IOS_DEVELOPMENT_TEAM in devkit.env)
+  shot-android   Android screenshot → Telegram
+  shot-ios       iOS screenshot → Telegram
+
+Examples:
+  ./mob-compose/setup --test
+  ./mob-compose/check
+  ./mob-compose/ios-start
+  ./mob-compose/shot-android -c "Android 验收"
+  ./mob-compose/shot-ios -c "iOS 验收"
+
+Config: mob-compose/compose.env (copy from devkit.env.example)
+EOF
+    ;;
+  *)
+    echo "unknown command: $cmd (try: ./mob-compose/help)" >&2
+    exit 1
+    ;;
+esac

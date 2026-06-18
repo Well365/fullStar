@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ja" style="scroll-behavior:smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telegram → iTerm2 の Claude Code/Codex をリモート操作</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --bg2:#f8f9fb; --bg3:#f0f2f5; --border:#e2e6ed;
+  --accent-blue:#2563eb; --accent-green:#16a34a; --accent-orange:#d97706;
+  --accent-red:#dc2626; --accent-purple:#7c3aed;
+  --text:#1e293b; --text-muted:#64748b; --text-dim:#94a3b8;
+}
+*{box-sizing:border-box;}
+body{margin:0; background:var(--bg); padding:40px 20px;
+  font-family:'Noto Sans JP',sans-serif; color:var(--text); line-height:1.7;}
+code,.mono{font-family:'JetBrains Mono',monospace;}
+.page{max-width:980px; margin:0 auto;}
+section[id]{scroll-margin-top:20px;}
+
+/* header */
+.doc-header{margin-bottom:28px;}
+.doc-kicker{display:inline-block; font-size:12px; font-weight:600; letter-spacing:1px;
+  color:var(--accent-blue); background:rgba(37,99,235,0.08);
+  padding:4px 12px; border-radius:20px; margin-bottom:14px;}
+.doc-title{font-size:28px; font-weight:700; margin:0 0 12px; line-height:1.3;}
+.doc-sub{font-size:15px; color:var(--text-muted); max-width:740px;}
+.doc-meta{margin-top:16px; display:flex; flex-wrap:wrap; gap:8px;}
+
+/* outline */
+.outline-block{background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+  padding:24px; margin-bottom:36px;}
+.outline-title{font-size:15px; font-weight:700; color:var(--text); margin-bottom:8px;
+  display:flex; align-items:center; gap:8px;}
+.mindmap{width:100%; height:auto;}
+
+/* section */
+section{margin-bottom:44px;}
+.section-title{font-size:19px; font-weight:700; color:var(--text); margin-bottom:20px;
+  display:flex; align-items:center; gap:10px;}
+.section-title::before{content:''; display:block; width:4px; height:21px;
+  background:var(--accent-blue); border-radius:2px;}
+.s2::before{background:var(--accent-green);}
+.s3::before{background:var(--accent-orange);}
+.s4::before{background:var(--accent-purple);}
+.s5::before{background:var(--accent-red);}
+.s6::before{background:var(--accent-blue);}
+p{margin:0 0 14px;}
+
+/* table */
+table{width:100%; border-collapse:collapse; background:var(--bg2);
+  border-radius:12px; overflow:hidden; border:1px solid var(--border); margin-bottom:16px;}
+thead tr{background:var(--bg3);}
+th{padding:11px 16px; color:var(--text-muted); font-size:12px; text-align:left;
+  letter-spacing:0.5px;}
+td{padding:11px 16px; border-bottom:1px solid var(--border); color:var(--text);
+  vertical-align:top; line-height:1.7; font-size:14px;}
+tr:last-child td{border-bottom:none;}
+td code, th code{font-size:12.5px;}
+
+/* tags */
+.tag{display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px;
+  font-weight:600; font-family:'JetBrains Mono',monospace; white-space:nowrap;}
+.tag-blue{background:rgba(37,99,235,0.08); color:#2563eb;}
+.tag-green{background:rgba(22,163,74,0.08); color:#16a34a;}
+.tag-orange{background:rgba(217,119,6,0.08); color:#d97706;}
+.tag-red{background:rgba(220,38,38,0.08); color:#dc2626;}
+.tag-purple{background:rgba(124,58,237,0.08); color:#7c3aed;}
+
+/* cards */
+.card-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
+.card{background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+  padding:18px 22px; box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.card.blue{border-top:3px solid #2563eb;}
+.card.green{border-top:3px solid #16a34a;}
+.card.orange{border-top:3px solid #d97706;}
+.card.purple{border-top:3px solid #7c3aed;}
+.card.red{border-top:3px solid #dc2626;}
+.card-title{font-weight:700; margin-bottom:8px; font-size:15px;}
+.card.blue .card-title{color:#2563eb;}
+.card.green .card-title{color:#16a34a;}
+.card.orange .card-title{color:#d97706;}
+.card.purple .card-title{color:#7c3aed;}
+.card.red .card-title{color:#dc2626;}
+.card p{font-size:13px; color:var(--text-muted); margin:0;}
+
+/* steps */
+.steps{margin-bottom:10px;}
+.step-row{display:flex; gap:16px;}
+.step-connector{display:flex; flex-direction:column; align-items:center;}
+.step-dot{width:30px; height:30px; border-radius:50%; border:2px solid; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;}
+.step-dot.blue{background:rgba(37,99,235,0.08); border-color:#2563eb; color:#2563eb;}
+.step-dot.green{background:rgba(22,163,74,0.08); border-color:#16a34a; color:#16a34a;}
+.step-dot.orange{background:rgba(217,119,6,0.08); border-color:#d97706; color:#d97706;}
+.step-dot.purple{background:rgba(124,58,237,0.08); border-color:#7c3aed; color:#7c3aed;}
+.step-dot.red{background:rgba(220,38,38,0.08); border-color:#dc2626; color:#dc2626;}
+.step-line{width:2px; flex:1; background:var(--border); min-height:18px; margin:4px 0;}
+.step-content{padding-bottom:22px;}
+.step-label{font-weight:700; font-size:15px; margin-bottom:4px;}
+.step-desc{font-size:13.5px; color:var(--text-muted);}
+.step-desc code{background:var(--bg3); padding:1px 5px; border-radius:4px; font-size:12px;}
+
+/* branch */
+.branch{display:flex; align-items:flex-start; gap:10px; background:var(--bg3);
+  border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-bottom:10px;}
+.branch-label{font-size:11px; font-weight:700; padding:2px 7px; border-radius:4px;
+  flex-shrink:0; margin-top:1px;}
+.yes{background:rgba(22,163,74,0.1); color:#16a34a;}
+.no{background:rgba(220,38,38,0.1); color:#dc2626;}
+.branch-content{font-size:13.5px;}
+
+/* alert */
+.alert{border-radius:10px; padding:14px 18px; font-size:13.5px;
+  display:flex; gap:12px; margin-bottom:16px;}
+.alert.tip{background:rgba(37,99,235,0.05); border:1px solid rgba(37,99,235,0.15);}
+.alert.warn{background:rgba(217,119,6,0.05); border:1px solid rgba(217,119,6,0.15);}
+.alert.success{background:rgba(22,163,74,0.05); border:1px solid rgba(22,163,74,0.15);}
+.alert-icon{flex-shrink:0;}
+.alert-text{color:var(--text-muted);}
+.alert-text strong{color:var(--text);}
+
+/* code block */
+.code-block{background:#f8fafc; border:1px solid var(--border); border-radius:8px;
+  padding:14px 18px; font-family:'JetBrains Mono',monospace; font-size:12.5px;
+  color:#334155; line-height:1.7; overflow-x:auto; margin-bottom:16px;}
+.kw{color:#2563eb;} .val{color:#16a34a;} .cm{color:#94a3b8;} .hl{color:#d97706;}
+
+/* arch diagram wrapper */
+.arch-wrap{background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+  padding:20px; margin-bottom:16px; overflow-x:auto;}
+.arch-wrap svg{width:100%; min-width:680px; height:auto; display:block;}
+
+/* floating TOC */
+.toc-toggle{position:fixed; z-index:101; right:24px; bottom:24px;
+  width:52px; height:52px; border-radius:50%; border:none;
+  background:var(--accent-blue); color:#fff; cursor:grab;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 4px 12px rgba(37,99,235,0.35),0 2px 4px rgba(0,0,0,0.1);
+  transition:box-shadow 0.2s ease; touch-action:none; user-select:none; -webkit-user-select:none;}
+.toc-toggle:hover{box-shadow:0 6px 16px rgba(37,99,235,0.45);}
+.toc-toggle.dragging{cursor:grabbing; box-shadow:0 8px 24px rgba(37,99,235,0.55); transition:none;}
+.toc-toggle svg{width:22px; height:22px; fill:#fff; pointer-events:none;}
+.toc-toggle .icon-close{display:none;}
+.toc-open .toc-toggle .icon-menu{display:none;}
+.toc-open .toc-toggle .icon-close{display:block;}
+.toc-backdrop{position:fixed; inset:0; background:rgba(15,23,42,0.4); opacity:0;
+  pointer-events:none; transition:opacity 0.25s ease; z-index:99; backdrop-filter:blur(2px);}
+.toc-open .toc-backdrop{opacity:1; pointer-events:auto;}
+.toc-panel{position:fixed; z-index:100; width:280px; max-height:calc(100vh - 120px);
+  background:var(--accent-blue); border-radius:16px; padding:16px 14px; overflow-y:auto;
+  box-shadow:0 12px 32px rgba(37,99,235,0.25),0 4px 12px rgba(0,0,0,0.12);
+  opacity:0; transform:scale(0.96); pointer-events:none;
+  transition:opacity 0.2s ease, transform 0.2s ease;
+  right:24px; bottom:88px; transform-origin:bottom right;}
+.toc-open .toc-panel{opacity:1; transform:scale(1); pointer-events:auto;}
+.toc-header{display:flex; align-items:center; gap:8px; padding:6px 10px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.15); color:#fff; font-size:14px;
+  font-weight:700; margin-bottom:8px;}
+.toc-list{display:flex; flex-direction:column; gap:6px;}
+.toc-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px;
+  background:rgba(255,255,255,0.08); color:#fff; text-decoration:none; font-size:13px;
+  font-weight:500; transition:background 0.15s ease, transform 0.15s ease; cursor:pointer;}
+.toc-item:hover{background:rgba(255,255,255,0.15); transform:translateX(2px);}
+.toc-item.active{background:#fff; color:var(--accent-blue); font-weight:700;}
+.toc-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+.toc-dot.blue{background:#60a5fa;} .toc-dot.green{background:#4ade80;}
+.toc-dot.orange{background:#fbbf24;} .toc-dot.purple{background:#c084fc;}
+.toc-dot.red{background:#f87171;}
+.toc-item.active .toc-dot.blue{background:var(--accent-blue);}
+.toc-item.active .toc-dot.green{background:var(--accent-green);}
+.toc-item.active .toc-dot.orange{background:var(--accent-orange);}
+.toc-item.active .toc-dot.purple{background:var(--accent-purple);}
+.toc-item.active .toc-dot.red{background:var(--accent-red);}
+
+/* language switch */
+.lang-switch{display:flex; gap:6px; margin-bottom:18px;}
+.lang-switch a{font-size:12px; font-weight:600; padding:4px 12px; border-radius:16px;
+  text-decoration:none; border:1px solid var(--border); color:var(--text-muted); background:var(--bg2);}
+.lang-switch a.active{background:var(--accent-blue); color:#fff; border-color:var(--accent-blue);}
+
+@media (max-width:640px){
+  body{padding:24px 14px;}
+  .doc-title{font-size:22px;}
+  .card-grid{grid-template-columns:1fr;}
+  .toc-panel{width:auto; max-height:70vh;}
+  .toc-toggle{right:16px; bottom:16px; width:48px; height:48px;}
+}
+</style>
+</head>
+<body>
+
+<div class="toc-backdrop"></div>
+<button class="toc-toggle" type="button" aria-label="目次">
+  <svg class="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+  <svg class="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+</button>
+<nav class="toc-panel" aria-label="目次">
+  <div class="toc-header">📑 目次</div>
+  <div class="toc-list">
+    <a class="toc-item" href="#sec1"><span class="toc-dot blue"></span>① 解決する課題</a>
+    <a class="toc-item" href="#sec2"><span class="toc-dot green"></span>② 全体アーキテクチャ図</a>
+    <a class="toc-item" href="#sec3"><span class="toc-dot orange"></span>③ メッセージのライフサイクル</a>
+    <a class="toc-item" href="#sec4"><span class="toc-dot purple"></span>④ 複数タブのルーティング</a>
+    <a class="toc-item" href="#sec5"><span class="toc-dot red"></span>⑤ 返信と完了判定</a>
+    <a class="toc-item" href="#sec6"><span class="toc-dot blue"></span>⑥ クイックスタート</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <header class="doc-header">
+    <div class="lang-switch">
+      <a href="TG_ITERM_AI_FLOW.html">中文</a>
+      <a href="TG_ITERM_AI_FLOW.en.html">English</a>
+      <a href="TG_ITERM_AI_FLOW.ja.html" class="active">日本語</a>
+    </div>
+    <span class="doc-kicker">mob-remote · README に欠けていた章</span>
+    <h1 class="doc-title">Telegram から iTerm2 内の Claude Code / Codex をリモート操作する</h1>
+    <p class="doc-sub">
+      スマホから Telegram Bot に一言送る → Mac 上で <strong>Claude Code / Codex</strong> がすでに動いている
+      iTerm2 タブへ自動で注入 → AI が実行 → アシスタントの返信が Telegram に自動で戻る。
+      キーボードの前にいなくても、ターミナルの中の AI コーディング助手に指示を出せます。
+    </p>
+    <div class="doc-meta">
+      <span class="tag tag-blue">tg-relay 受信</span>
+      <span class="tag tag-purple">term-bridge 注入/キャプチャ</span>
+      <span class="tag tag-green">tg-notify 送信</span>
+      <span class="tag tag-orange">macOS · iTerm2 · AppleScript</span>
+    </div>
+  </header>
+
+  <!-- OUTLINE MINDMAP -->
+  <div class="outline-block">
+    <div class="outline-title">📑 ドキュメント概要</div>
+    <svg class="mindmap" viewBox="0 0 880 440" xmlns="http://www.w3.org/2000/svg">
+      <!-- center -->
+      <rect x="338" y="195" width="204" height="52" rx="26" fill="rgba(37,99,235,0.1)" stroke="#2563eb" stroke-width="2"/>
+      <text x="440" y="227" text-anchor="middle" fill="#2563eb" font-size="13.5" font-weight="700" font-family="'Noto Sans JP',sans-serif">TG → AI ターミナル橋</text>
+
+      <!-- ① left-top -->
+      <a href="#sec1">
+        <line x1="338" y1="215" x2="190" y2="80" stroke="#2563eb" stroke-width="2" opacity="0.5"/>
+        <rect x="56" y="58" width="156" height="38" rx="19" fill="rgba(37,99,235,0.08)" stroke="#2563eb" stroke-width="1.5"/>
+        <text x="134" y="82" text-anchor="middle" fill="#2563eb" font-size="11.5" font-weight="600" font-family="'Noto Sans JP',sans-serif">① 解決する課題</text>
+      </a>
+      <!-- ② left-mid -->
+      <a href="#sec2">
+        <line x1="338" y1="221" x2="180" y2="200" stroke="#16a34a" stroke-width="2" opacity="0.5"/>
+        <rect x="54" y="181" width="146" height="38" rx="19" fill="rgba(22,163,74,0.08)" stroke="#16a34a" stroke-width="1.5"/>
+        <text x="127" y="205" text-anchor="middle" fill="#16a34a" font-size="11.5" font-weight="600" font-family="'Noto Sans JP',sans-serif">② アーキテクチャ</text>
+      </a>
+      <!-- ③ left-bottom -->
+      <a href="#sec3">
+        <line x1="338" y1="227" x2="190" y2="360" stroke="#d97706" stroke-width="2" opacity="0.5"/>
+        <rect x="44" y="342" width="172" height="38" rx="19" fill="rgba(217,119,6,0.08)" stroke="#d97706" stroke-width="1.5"/>
+        <text x="130" y="366" text-anchor="middle" fill="#d97706" font-size="11" font-weight="600" font-family="'Noto Sans JP',sans-serif">③ ライフサイクル</text>
+      </a>
+      <!-- ④ right-top -->
+      <a href="#sec4">
+        <line x1="542" y1="215" x2="690" y2="80" stroke="#7c3aed" stroke-width="2" opacity="0.5"/>
+        <rect x="658" y="58" width="162" height="38" rx="19" fill="rgba(124,58,237,0.08)" stroke="#7c3aed" stroke-width="1.5"/>
+        <text x="739" y="82" text-anchor="middle" fill="#7c3aed" font-size="11" font-weight="600" font-family="'Noto Sans JP',sans-serif">④ タブのルーティング</text>
+      </a>
+      <!-- ⑤ right-mid -->
+      <a href="#sec5">
+        <line x1="542" y1="221" x2="700" y2="200" stroke="#dc2626" stroke-width="2" opacity="0.5"/>
+        <rect x="664" y="181" width="166" height="38" rx="19" fill="rgba(220,38,38,0.08)" stroke="#dc2626" stroke-width="1.5"/>
+        <text x="747" y="205" text-anchor="middle" fill="#dc2626" font-size="11.5" font-weight="600" font-family="'Noto Sans JP',sans-serif">⑤ 返信と完了判定</text>
+      </a>
+      <!-- ⑥ right-bottom -->
+      <a href="#sec6">
+        <line x1="542" y1="227" x2="690" y2="360" stroke="#2563eb" stroke-width="2" opacity="0.5"/>
+        <rect x="660" y="342" width="160" height="38" rx="19" fill="rgba(37,99,235,0.08)" stroke="#2563eb" stroke-width="1.5"/>
+        <text x="740" y="366" text-anchor="middle" fill="#2563eb" font-size="11" font-weight="600" font-family="'Noto Sans JP',sans-serif">⑥ クイックスタート</text>
+      </a>
+    </svg>
+  </div>
+
+  <!-- SEC 1 -->
+  <section id="sec1">
+    <div class="section-title">① 解決する課題</div>
+    <p>
+      README には <code>/shot</code> や <code>/tap</code> といったデバイス操作コマンドは書かれていますが、
+      <strong>最も強力な経路が抜けています</strong>。それは Telegram を「AI コーディング助手のリモコン」にすることです。
+      あなたは外出中、Mac は自宅、iTerm2 にはすでに Claude Code / Codex のセッションが立ち上がっている——
+      その状態で、スマホから仕事を振り、AI の回答を受け取れます。
+    </p>
+    <div class="card-grid">
+      <div class="card red">
+        <div class="card-title">❌ この経路がないと</div>
+        <p>PC の前に座り、該当する iTerm タブに切り替え、Claude Code に手で打ち込み、机で結果を待つしかありません。席を離れると切断されます。</p>
+      </div>
+      <div class="card green">
+        <div class="card-title">✅ この経路があれば</div>
+        <p>スマホで「<code>[t3] ログインのバグを直して</code>」と送る → tab 3 の Claude Code に届く → AI が作業 → 返信が Telegram に自動で戻る。通勤中でも複数プロジェクトを見守れます。</p>
+      </div>
+    </div>
+    <div class="alert tip">
+      <span class="alert-icon">💡</span>
+      <div class="alert-text"><strong>核心の位置づけ</strong>：これは「リモート SSH」ではなく<strong>双方向のブリッジ</strong>です。
+      Telegram のテキストが入り、AI アシスタントの返信が出る。その両端を iTerm2 の AppleScript 注入と画面バッファのキャプチャがつないでいます。</div>
+    </div>
+  </section>
+
+  <!-- SEC 2 -->
+  <section id="sec2">
+    <div class="section-title s2">② 全体アーキテクチャ図</div>
+    <p>3 段構成：<strong>受信 tg-relay</strong> → <strong>term-bridge 注入/キャプチャ</strong> → <strong>送信 tg-notify</strong>。その中央に、実際に作業する iTerm2 タブが挟まります。</p>
+    <div class="arch-wrap">
+      <svg viewBox="0 0 820 360" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans JP',sans-serif">
+        <defs>
+          <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/>
+          </marker>
+        </defs>
+
+        <!-- Phone zone -->
+        <rect x="14" y="40" width="150" height="280" rx="14" fill="#f8f9fb" stroke="#e2e6ed"/>
+        <text x="89" y="64" text-anchor="middle" font-size="11" font-weight="700" fill="#64748b">📱 スマホ Telegram</text>
+        <rect x="30" y="86" width="118" height="64" rx="10" fill="rgba(37,99,235,0.08)" stroke="#2563eb" stroke-width="1.5"/>
+        <text x="89" y="112" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2563eb">一言送る</text>
+        <text x="89" y="132" text-anchor="middle" font-size="9.5" fill="#64748b">[t3] ログイン修正</text>
+        <rect x="30" y="214" width="118" height="64" rx="10" fill="rgba(22,163,74,0.08)" stroke="#16a34a" stroke-width="1.5"/>
+        <text x="89" y="240" text-anchor="middle" font-size="11.5" font-weight="600" fill="#16a34a">AI の返信を受信</text>
+        <text x="89" y="260" text-anchor="middle" font-size="9.5" fill="#64748b">+ 任意でスクショ</text>
+
+        <!-- Mac zone -->
+        <rect x="200" y="20" width="412" height="320" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-dasharray="5 4"/>
+        <text x="406" y="42" text-anchor="middle" font-size="11" font-weight="700" fill="#475569">💻 Mac · mob-remote デーモン</text>
+
+        <!-- inbound -->
+        <rect x="222" y="70" width="170" height="74" rx="10" fill="rgba(37,99,235,0.06)" stroke="#2563eb" stroke-width="1.5"/>
+        <text x="307" y="94" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2563eb">tg-relay</text>
+        <text x="307" y="113" text-anchor="middle" font-size="9.5" fill="#64748b">Bot 監視 · 接頭辞解析</text>
+        <text x="307" y="130" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="'JetBrains Mono',monospace">iterm_route.py</text>
+
+        <!-- inject -->
+        <rect x="222" y="166" width="170" height="64" rx="10" fill="rgba(124,58,237,0.06)" stroke="#7c3aed" stroke-width="1.5"/>
+        <text x="307" y="190" text-anchor="middle" font-size="12.5" font-weight="700" fill="#7c3aed">iterm-inject</text>
+        <text x="307" y="208" text-anchor="middle" font-size="9.5" fill="#64748b">AppleScript で入力+Enter</text>
+
+        <!-- iterm tab -->
+        <rect x="430" y="120" width="160" height="92" rx="10" fill="rgba(217,119,6,0.06)" stroke="#d97706" stroke-width="1.8"/>
+        <text x="510" y="146" text-anchor="middle" font-size="12.5" font-weight="700" fill="#d97706">iTerm2 · tab 3</text>
+        <text x="510" y="166" text-anchor="middle" font-size="11" fill="#1e293b" font-weight="600">Claude Code</text>
+        <text x="510" y="183" text-anchor="middle" font-size="11" fill="#1e293b" font-weight="600">/ Codex</text>
+        <text x="510" y="201" text-anchor="middle" font-size="9.5" fill="#94a3b8">AI が実行</text>
+
+        <!-- monitor -->
+        <rect x="222" y="252" width="170" height="68" rx="10" fill="rgba(220,38,38,0.06)" stroke="#dc2626" stroke-width="1.5"/>
+        <text x="307" y="276" text-anchor="middle" font-size="12.5" font-weight="700" fill="#dc2626">iterm-monitor</text>
+        <text x="307" y="294" text-anchor="middle" font-size="9.5" fill="#64748b">バッファ監視 · 返信抽出</text>
+        <text x="307" y="311" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="'JetBrains Mono',monospace">iterm_extract.py</text>
+
+        <!-- outbound -->
+        <rect x="430" y="252" width="160" height="68" rx="10" fill="rgba(22,163,74,0.06)" stroke="#16a34a" stroke-width="1.5"/>
+        <text x="510" y="280" text-anchor="middle" font-size="12.5" font-weight="700" fill="#16a34a">tg-notify send</text>
+        <text x="510" y="299" text-anchor="middle" font-size="9.5" fill="#64748b">返信を個人チャットへ</text>
+
+        <!-- log buffer -->
+        <rect x="628" y="120" width="172" height="92" rx="10" fill="#f0f2f5" stroke="#cbd5e1"/>
+        <text x="714" y="150" text-anchor="middle" font-size="10.5" font-weight="700" fill="#475569">ローカルログ</text>
+        <text x="714" y="170" text-anchor="middle" font-size="9.5" fill="#94a3b8" font-family="'JetBrains Mono',monospace">inbox/iterm-</text>
+        <text x="714" y="184" text-anchor="middle" font-size="9.5" fill="#94a3b8" font-family="'JetBrains Mono',monospace">session-*.log</text>
+        <text x="714" y="202" text-anchor="middle" font-size="9.5" fill="#94a3b8">途切れ防止</text>
+
+        <!-- arrows -->
+        <line x1="148" y1="118" x2="220" y2="105" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <line x1="307" y1="144" x2="307" y2="164" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <line x1="392" y1="190" x2="428" y2="178" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <line x1="590" y1="170" x2="626" y2="170" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <path d="M510,212 C510,235 380,232 392,275" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <line x1="392" y1="286" x2="428" y2="286" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <path d="M430,300 C300,330 180,320 148,250" fill="none" stroke="#16a34a" stroke-width="1.6" marker-end="url(#ah)" opacity="0.6"/>
+      </svg>
+    </div>
+    <table>
+      <thead><tr><th>役割</th><th>コンポーネント / ファイル</th><th>責務</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-blue">受信</span></td><td><code>tg-relay/</code> · <code>iterm_route.py</code></td><td>Telegram Bot を監視し、メッセージの接頭辞を解析。どのタブへ送るか決め、接頭辞を外して本文だけ残す</td></tr>
+        <tr><td><span class="tag tag-purple">注入</span></td><td><code>term-bridge/iterm-inject.py</code></td><td><code>osascript</code> の AppleScript で対象 window/tab/session に本文を入力し Enter を押す</td></tr>
+        <tr><td><span class="tag tag-orange">実行</span></td><td>iTerm2 タブ内の <strong>Claude Code / Codex</strong></td><td>注入された文字をプロンプトとして扱い、実際にコードを読み・編集し・コマンドを走らせる</td></tr>
+        <tr><td><span class="tag tag-red">取得</span></td><td><code>iterm-monitor.py</code> · <code>iterm_extract.py</code></td><td>画面バッファを監視し「アシスタントの最新返信」を抽出。回答が完了したか判定する</td></tr>
+        <tr><td><span class="tag tag-green">送信</span></td><td><code>tg-notify send</code></td><td>抽出した返信を Telegram の個人チャットに送り返す（同じ Bot）</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SEC 3 -->
+  <section id="sec3">
+    <div class="section-title s3">③ メッセージのライフサイクル</div>
+    <p>送信ボタンを押してから、AI の返信がスマホに戻るまで、5 つの段階を通ります：</p>
+    <div class="steps">
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot blue">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">送信＋接頭辞の解析</div>
+          <div class="step-desc"><code>tg-relay</code> が <code>[t3] ログインのバグを直して</code> を受信。<code>parse_routed_message()</code> が接頭辞 <code>[t3]</code> を認識 → ターゲット <code>w1/t3</code>、本文は「ログインのバグを直して」に剥がされる。</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot purple">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">iTerm2 タブへ注入</div>
+          <div class="step-desc"><code>iterm-inject.py</code> が AppleScript で window 1 / tab 3 のアクティブな session を特定し、本文を <code>write text</code>＋Enter で入力——「あなたの代わりにそのタブで打ち込む」イメージ。同時に <code>inbox/pending.txt</code> へバックアップ。</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot orange">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">Claude Code / Codex が実行</div>
+          <div class="step-desc">そのタブで動く AI がこの一文をプロンプトとして受け取り、コードを読み・編集し・コマンドを実行。出力は同時にローカルログ <code>inbox/iterm-session-*.log</code> へも書かれ、長い返信が iTerm の既定行数で切れないようにする。</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot red">4</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">遅延後にキャプチャ開始</div>
+          <div class="step-desc">注入から <code>TG_ITERM_MONITOR_AFTER</code> 秒後（既定約 45 秒）、<code>iterm-monitor</code> が画面バッファの監視を始め、<code>extract_latest_reply()</code> でプロンプトを除外し、アシスタントの回答だけを抜き出す。</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot green">5</div></div>
+        <div class="step-content">
+          <div class="step-label">Telegram へ返送</div>
+          <div class="step-desc">返信が「書き終わった」と判定されたら <code>tg-notify send</code> で個人チャットへ送り返す。長時間新しい出力がない場合は、iTerm のスクリーンショットを送るフォールバックも可能。</div>
+        </div>
+      </div>
+    </div>
+    <div class="code-block">
+<span class="cm"># スマホで見えるやり取り</span><br>
+<span class="kw">あなた</span> ▸ [t3] ログイン API の 500 エラーを直して<br>
+<span class="hl">bot</span> ▸ typed into iTerm tab 3 (../myapp (-zsh))   <span class="cm">; 注入済み</span><br>
+<span class="cm">        …… (約 45 秒後) ……</span><br>
+<span class="val">bot</span> ▸ 特定：login.py の token 解析で KeyError 未捕捉。<br>
+<span class="val">    </span>   try/except を追加しテストも補完、3 件パス ✅
+    </div>
+  </section>
+
+  <!-- SEC 4 -->
+  <section id="sec4">
+    <div class="section-title s4">④ 複数タブのルーティング：誰に届くか</div>
+    <p>複数のタブを同時に開き、それぞれ別プロジェクト・別の AI セッションを走らせていることもあります。<strong>メッセージの接頭辞</strong>で、その一文がどのタブへ入るかが決まります。1 つの会話の中で自由に切り替えられ、設定変更は不要です。</p>
+    <table>
+      <thead><tr><th>方式</th><th>書き方</th><th>例</th><th>ルール</th></tr></thead>
+      <tbody>
+        <tr><td>タブ番号で</td><td><code>[tN]</code> / <code>#N</code> / <code>@tN:</code></td><td><code>[t3] ディレクトリ一覧</code></td><td>最も一般的、N = タブ番号</td></tr>
+        <tr><td>ディレクトリ/プロジェクト名で</td><td><code>[名前]</code> / <code>@名前:</code></td><td><code>[myapp] テスト実行</code></td><td>タブ題名のディレクトリ断片を曖昧一致</td></tr>
+        <tr><td>.env エイリアスで</td><td><code>[エイリアス]</code></td><td><code>[fz] デプロイ確認</code></td><td>正確なマッピング、名前が重複する時に最も確実</td></tr>
+        <tr><td>接頭辞なし</td><td>（本文のみ）</td><td><code>git の状態を確認</code></td><td><code>.env</code> の既定タブに落ちる</td></tr>
+      </tbody>
+    </table>
+    <div class="code-block">
+<span class="cm"># .env —— 重複ディレクトリ名に正確なエイリアス（エイリアス:窓番号:タブ番号）</span><br>
+<span class="kw">TG_ITERM_ALIASES</span>=<span class="val">fz:1:7,myapp:1:11,api:1:6</span>
+    </div>
+    <p><strong>ルーティング判定</strong>（<code>iterm_route.py</code> 内部のロジック）：</p>
+    <div class="branch"><span class="branch-label no">接頭辞なし</span><div class="branch-content">→ <code>.env</code> の <code>TG_ITERM_WINDOW</code> / <code>TG_ITERM_TAB</code> の既定タブを使う</div></div>
+    <div class="branch"><span class="branch-label yes">接頭辞が数字</span><div class="branch-content">→ タブ番号で特定（同番号で曖昧な時は window 1 を優先）</div></div>
+    <div class="branch"><span class="branch-label yes">接頭辞がエイリアス/名前</span><div class="branch-content">→ まず <code>TG_ITERM_ALIASES</code> を照会、未命中なら題名を曖昧一致。候補が複数なら最短の名前（最も具体的）を採用</div></div>
+    <div class="alert tip">
+      <span class="alert-icon">🧭</span>
+      <div class="alert-text">スマホから <code>/tabs</code> を送れば、Bot が現在の iTerm タブと推奨接頭辞をすべて一覧表示。番号を覚える必要はありません。</div>
+    </div>
+  </section>
+
+  <!-- SEC 5 -->
+  <section id="sec5">
+    <div class="section-title s5">⑤ 返信と完了判定（最も巧妙な部分）</div>
+    <p>難しいのは、ターミナル出力がストリーミングである点。AI が「言い終わった」とどう判断し、どの部分を返すか？ <code>iterm-monitor.py</code> は 3 つのシグナルで判定します：</p>
+    <div class="card-grid">
+      <div class="card blue">
+        <div class="card-title">① 完了マーカー</div>
+        <p><code>is_reply_complete()</code> が Claude Code / Codex の回答が締めくくられる特徴（プロンプト復帰、終端記号）を認識。命中すれば書き終えたとみなす。</p>
+      </div>
+      <div class="card orange">
+        <div class="card-title">② 安定ポーリング</div>
+        <p>取得内容が <code>TG_ITERM_MONITOR_STABLE_POLLS</code> 回連続（既定 2）で変化しなければ、出力は安定し送信可能とみなす。</p>
+      </div>
+      <div class="card green">
+        <div class="card-title">③ 重複排除</div>
+        <p>抽出結果が「前回送信分」（<code>last-sent</code> 状態ファイル）と同じならスキップ。同じ返信の連投を防ぐ。</p>
+      </div>
+      <div class="card red">
+        <div class="card-title">④ スクショのフォールバック</div>
+        <p><code>TG_ITERM_MONITOR_SCREENSHOT_IDLE</code> 秒（既定 60）を超えて、新しい文字も抽出可能な返信もなければ、代わりに iTerm のスクショを送る。</p>
+      </div>
+    </div>
+    <div class="alert warn">
+      <span class="alert-icon">⚠️</span>
+      <div class="alert-text"><strong>アシスタントの返信のみ、ノイズは送らない</strong>：<code>extract_latest_reply()</code> は shell プロンプト、注入した原文、プログレスバー等を除外し、AI の実際の回答だけを返すことを目指す。各タブは独立した状態ファイル <code>inbox/iterm-monitor-w1-t{N}.*</code> を持ち、互いに混線しない。</div>
+    </div>
+    <div class="alert warn">
+      <span class="alert-icon">🔒</span>
+      <div class="alert-text"><strong>返送は個人チャットへ</strong>：<code>iterm-monitor</code> は <code>TELEGRAM_CHAT_ID</code> が正の数（個人チャット）であることを要求。グループ（負の数）は拒否される——コードや出力をグループに誤送信しないため。</div>
+    </div>
+  </section>
+
+  <!-- SEC 6 -->
+  <section id="sec6">
+    <div class="section-title s6">⑥ クイックスタート</div>
+    <p>前提：<code>docs/TELEGRAM_SETUP.md</code> に従って Bot Token と Chat ID を設定済み、かつ Claude Code / Codex を動かす iTerm2 タブを開いていること。</p>
+    <div class="steps">
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot blue">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">.env で注入を有効化</div>
+          <div class="step-desc"><code>TG_RELAY_ITERM_INJECT=1</code>（自然言語 → 注入）、<code>TG_ITERM_MONITOR_AFTER=45</code>（注入後どれだけで返信取得を始めるか）。</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot green">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">iTerm のスクロールバッファを増やす（1 回）</div>
+          <div class="step-desc"><code>./mob iterm-buffer-setup</code> —— 長い返信が既定 1000 行の制限で切れるのを防ぐ。</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot orange">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">どのタブがあるか確認</div>
+          <div class="step-desc"><code>./mob iterm-list</code> —— 各タブの番号・題名・推奨接頭辞/エイリアスを一覧表示。</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot purple">4</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">フルスタックを起動</div>
+          <div class="step-desc"><code>./mob up</code> —— <code>tg-relay</code>（受信）と <code>iterm-monitor</code>（出力返送）を同時に立ち上げる。</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot red">5</div></div>
+        <div class="step-content">
+          <div class="step-label">スマホから送信</div>
+          <div class="step-desc">Telegram で <code>[t3] この関数をリファクタして</code> と送ると、約 45 秒後に Claude Code の回答がスマホへ戻る。</div>
+        </div>
+      </div>
+    </div>
+    <div class="code-block">
+<span class="cm"># ローカル CLI チートシート</span><br>
+./mob up                 <span class="cm"># relay + monitor を起動</span><br>
+./mob down               <span class="cm"># 停止</span><br>
+./mob iterm-list         <span class="cm"># タブ一覧</span><br>
+./mob iterm-route <span class="val">"[myapp] test"</span>   <span class="cm"># ルート解析をローカルで試す</span>
+    </div>
+    <div class="alert success">
+      <span class="alert-icon">✅</span>
+      <div class="alert-text"><strong>一言で覚える</strong>：Telegram はリモコン、iTerm2 タブ内の Claude Code / Codex はロボットアーム、
+      <code>term-bridge</code> は両者をつなぐケーブル——テキストを入れ、AI の返信を受け取る。</div>
+    </div>
+    <div class="alert tip">
+      <span class="alert-icon">📚</span>
+      <div class="alert-text">関連資料：<code>docs/ITERM_MULTI_TAB.md</code>（複数タブのルーティング完全ガイド） · <code>docs/TELEGRAM_SETUP.md</code>（Token / Chat ID 設定）。</div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const toggleBtn = document.querySelector('.toc-toggle');
+  const panel = document.querySelector('.toc-panel');
+  const backdrop = document.querySelector('.toc-backdrop');
+  function closeTOC(){ document.body.classList.remove('toc-open'); }
+  function toggleTOC(){ document.body.classList.toggle('toc-open'); }
+  backdrop.addEventListener('click', closeTOC);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeTOC(); });
+
+  const DRAG_THRESHOLD = 5, MARGIN = 8;
+  let dragState = null;
+  function updatePanelPosition(){
+    const rect = toggleBtn.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const panelW = Math.min(280, vw - 32);
+    const panelH = panel.offsetHeight || 400;
+    const gap = 12; let left, top, transformOrigin;
+    if(rect.left + rect.width/2 < vw/2){ left = rect.left; transformOrigin = 'left'; }
+    else { left = rect.right - panelW; transformOrigin = 'right'; }
+    if(rect.top + rect.height/2 < vh/2){ top = rect.bottom + gap; transformOrigin = 'top ' + transformOrigin; }
+    else { top = rect.top - panelH - gap; transformOrigin = 'bottom ' + transformOrigin; }
+    left = Math.max(MARGIN, Math.min(left, vw - panelW - MARGIN));
+    top = Math.max(MARGIN, Math.min(top, vh - panelH - MARGIN));
+    Object.assign(panel.style, { left:left+'px', top:top+'px', right:'auto', bottom:'auto', width:panelW+'px', transformOrigin });
+  }
+  function setButtonPosition(x, y){
+    const rect = toggleBtn.getBoundingClientRect(); const btnSize = rect.width;
+    x = Math.max(MARGIN, Math.min(x, window.innerWidth - btnSize - MARGIN));
+    y = Math.max(MARGIN, Math.min(y, window.innerHeight - btnSize - MARGIN));
+    Object.assign(toggleBtn.style, { left:x+'px', top:y+'px', right:'auto', bottom:'auto' });
+    try{ sessionStorage.setItem('tocBtnPos', JSON.stringify({x, y})); }catch(e){}
+  }
+  function getPointerCoords(e){
+    if(e.touches?.length) return { x:e.touches[0].clientX, y:e.touches[0].clientY };
+    if(e.changedTouches?.length) return { x:e.changedTouches[0].clientX, y:e.changedTouches[0].clientY };
+    return { x:e.clientX, y:e.clientY };
+  }
+  function onPointerDown(e){
+    const rect = toggleBtn.getBoundingClientRect(); const p = getPointerCoords(e);
+    dragState = { startX:p.x, startY:p.y, btnX:rect.left, btnY:rect.top, moved:false };
+    if(document.body.classList.contains('toc-open')) closeTOC();
+    e.preventDefault();
+  }
+  function onPointerMove(e){
+    if(!dragState) return; const p = getPointerCoords(e);
+    const dx = p.x - dragState.startX, dy = p.y - dragState.startY;
+    if(!dragState.moved && Math.hypot(dx,dy) > DRAG_THRESHOLD){ dragState.moved = true; toggleBtn.classList.add('dragging'); }
+    if(dragState.moved){ setButtonPosition(dragState.btnX + dx, dragState.btnY + dy); e.preventDefault(); }
+  }
+  function onPointerUp(){
+    if(!dragState) return; const wasMoved = dragState.moved; dragState = null;
+    toggleBtn.classList.remove('dragging');
+    if(!wasMoved){ toggleTOC(); if(document.body.classList.contains('toc-open')) updatePanelPosition(); }
+  }
+  toggleBtn.addEventListener('mousedown', onPointerDown);
+  toggleBtn.addEventListener('touchstart', onPointerDown, { passive:false });
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('touchmove', onPointerMove, { passive:false });
+  window.addEventListener('mouseup', onPointerUp);
+  window.addEventListener('touchend', onPointerUp);
+  try{ const saved = sessionStorage.getItem('tocBtnPos'); if(saved){ const pos = JSON.parse(saved); setButtonPosition(pos.x, pos.y); } }catch(e){}
+  window.addEventListener('resize', ()=>{
+    const rect = toggleBtn.getBoundingClientRect();
+    if(toggleBtn.style.left) setButtonPosition(rect.left, rect.top);
+    if(document.body.classList.contains('toc-open')) updatePanelPosition();
+  });
+  document.querySelectorAll('.toc-item').forEach(a=>a.addEventListener('click', closeTOC));
+  const tocLinks = document.querySelectorAll('.toc-item');
+  const sections = [...tocLinks].map(a => document.querySelector(a.getAttribute('href')));
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){ const id = entry.target.id;
+        tocLinks.forEach(a=>a.classList.toggle('active', a.getAttribute('href')==='#'+id)); }
+    });
+  }, { rootMargin:'-20% 0px -70% 0px' });
+  sections.forEach(sec=>sec && observer.observe(sec));
+</script>
+</body>
+</html>

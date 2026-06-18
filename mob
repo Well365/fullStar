@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# mob-remote unified CLI — wraps mob-compose + tg-relay + term-bridge
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMPOSE="$ROOT/mob-compose/compose"
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+  up|tg-up|tg-all-start|start-tg)
+    exec "$ROOT/tg-relay/tg-stack-daemon.sh" start "$@"
+    ;;
+  down|tg-down|tg-all-stop|stop-tg)
+    exec "$ROOT/tg-relay/tg-stack-daemon.sh" stop "$@"
+    ;;
+  tg-start|listen)
+    exec "$ROOT/tg-relay/tg-relay-daemon.sh" start "$@"
+    ;;
+  tg-stop)
+    exec "$ROOT/tg-relay/tg-relay-daemon.sh" stop "$@"
+    ;;
+  tg-restart)
+    exec "$ROOT/tg-relay/tg-relay-daemon.sh" restart "$@"
+    ;;
+  tg-status)
+    exec "$ROOT/tg-relay/tg-stack-daemon.sh" status "$@"
+    ;;
+  tg-relay|tg-relay-once)
+    exec python3 "$ROOT/tg-relay/run_tg_relay.py" "$@"
+    ;;
+  tg-setup|setup-telegram|setup-tg)
+    exec "$ROOT/tg-relay/setup-telegram.sh" "$@"
+    ;;
+  tg-inbox)
+    exec cat "$ROOT/inbox/pending.txt" 2>/dev/null || echo "(inbox empty)"
+    ;;
+  iterm-inject|tg-iterm|term-inject)
+    exec python3 "$ROOT/term-bridge/iterm-inject.py" "$@"
+    ;;
+  iterm-capture|term-capture)
+    exec python3 "$ROOT/term-bridge/iterm-capture.py" "$@"
+    ;;
+  iterm-monitor|iterm-monitor-start|term-monitor)
+    exec python3 "$ROOT/term-bridge/iterm-monitor.py" "$@"
+    ;;
+  iterm-extract|term-extract)
+    exec python3 "$ROOT/term-bridge/iterm_extract.py" "$@"
+    ;;
+  iterm-screenshot|term-screenshot)
+    exec python3 "$ROOT/term-bridge/iterm-screenshot.py" "$@"
+    ;;
+  iterm-list|term-list)
+    exec python3 "$ROOT/term-bridge/iterm-list.py" "$@"
+    ;;
+  iterm-route|term-route)
+    exec python3 "$ROOT/term-bridge/iterm_route.py" "$@"
+    ;;
+  iterm-buffer-setup|term-buffer-setup)
+    exec python3 "$ROOT/term-bridge/iterm-buffer-setup.py" "$@"
+    ;;
+  iterm-monitor-once|term-monitor-once)
+    exec python3 "$ROOT/term-bridge/iterm-monitor.py" --once --force "$@"
+    ;;
+  install-skill)
+    exec "$ROOT/scripts/install-skill.sh" "$@"
+    ;;
+  ""|help|-h|--help)
+    "$COMPOSE" help
+    cat <<'EOF'
+
+mob-remote extras:
+  up             Start full TG stack (tg-relay + term-bridge monitor)
+  down           Stop full TG stack
+  tg-setup       One-click Telegram token + chat_id setup (--test)
+  tg-start       Start tg-relay only (singleton daemon)
+  tg-stop        Stop tg-relay only
+  tg-restart     Stop duplicates and restart tg-relay daemon
+  tg-status      Show tg-relay + term-bridge status + logs
+  tg-relay-once  Run tg-relay once in foreground (debug)
+  tg-inbox       Show pending natural-language tasks for Agent
+  term-inject    Type text into iTerm2 (TG_ITERM_WINDOW/TAB)
+  term-list      List iTerm windows/tabs for configuration
+  term-capture   Read iTerm2 session output (--tail 50)
+  term-extract   Preview assistant reply extracted for Telegram
+  term-screenshot  Capture iTerm window -> Telegram
+  term-buffer-setup  Set iTerm2 unlimited scrollback (macOS)
+  term-monitor   Poll iTerm -> Telegram (assistant reply only)
+  term-monitor-once  Extract latest reply and send once to TG
+  install-skill  Install skills (composable: --only tg-notify,droid-ctl,iphone-ctl)
+                 ./mob install-skill --list
+
+Legacy aliases: mobagent, iterm-* (same as term-*)
+EOF
+    ;;
+  *)
+    exec "$COMPOSE" "$cmd" "$@"
+    ;;
+esac

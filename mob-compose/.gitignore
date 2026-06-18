@@ -1,0 +1,4 @@
+# devkit
+.ios-proxy.pid
+.ios-proxy.log
+devkit.env

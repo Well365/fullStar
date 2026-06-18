@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en" style="scroll-behavior:smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telegram → iTerm2 Claude Code/Codex Remote Driver</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --bg2:#f8f9fb; --bg3:#f0f2f5; --border:#e2e6ed;
+  --accent-blue:#2563eb; --accent-green:#16a34a; --accent-orange:#d97706;
+  --accent-red:#dc2626; --accent-purple:#7c3aed;
+  --text:#1e293b; --text-muted:#64748b; --text-dim:#94a3b8;
+}
+*{box-sizing:border-box;}
+body{margin:0; background:var(--bg); padding:40px 20px;
+  font-family:'Inter',sans-serif; color:var(--text); line-height:1.65;}
+code,.mono{font-family:'JetBrains Mono',monospace;}
+.page{max-width:980px; margin:0 auto;}
+section[id]{scroll-margin-top:20px;}
+
+/* header */
+.doc-header{margin-bottom:28px;}
+.doc-kicker{display:inline-block; font-size:12px; font-weight:600; letter-spacing:1px;
+  color:var(--accent-blue); background:rgba(37,99,235,0.08);
+  padding:4px 12px; border-radius:20px; margin-bottom:14px; text-transform:uppercase;}
+.doc-title{font-size:30px; font-weight:700; margin:0 0 12px; line-height:1.25;}
+.doc-sub{font-size:15px; color:var(--text-muted); max-width:740px;}
+.doc-meta{margin-top:16px; display:flex; flex-wrap:wrap; gap:8px;}
+
+/* outline */
+.outline-block{background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+  padding:24px; margin-bottom:36px;}
+.outline-title{font-size:15px; font-weight:700; color:var(--text); margin-bottom:8px;
+  display:flex; align-items:center; gap:8px;}
+.mindmap{width:100%; height:auto;}
+
+/* section */
+section{margin-bottom:44px;}
+.section-title{font-size:19px; font-weight:700; color:var(--text); margin-bottom:20px;
+  display:flex; align-items:center; gap:10px;}
+.section-title::before{content:''; display:block; width:4px; height:21px;
+  background:var(--accent-blue); border-radius:2px;}
+.s2::before{background:var(--accent-green);}
+.s3::before{background:var(--accent-orange);}
+.s4::before{background:var(--accent-purple);}
+.s5::before{background:var(--accent-red);}
+.s6::before{background:var(--accent-blue);}
+p{margin:0 0 14px;}
+
+/* table */
+table{width:100%; border-collapse:collapse; background:var(--bg2);
+  border-radius:12px; overflow:hidden; border:1px solid var(--border); margin-bottom:16px;}
+thead tr{background:var(--bg3);}
+th{padding:11px 16px; color:var(--text-muted); font-size:12px; text-align:left;
+  text-transform:uppercase; letter-spacing:0.5px;}
+td{padding:11px 16px; border-bottom:1px solid var(--border); color:var(--text);
+  vertical-align:top; line-height:1.6; font-size:14px;}
+tr:last-child td{border-bottom:none;}
+td code, th code{font-size:12.5px;}
+
+/* tags */
+.tag{display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px;
+  font-weight:600; font-family:'JetBrains Mono',monospace; white-space:nowrap;}
+.tag-blue{background:rgba(37,99,235,0.08); color:#2563eb;}
+.tag-green{background:rgba(22,163,74,0.08); color:#16a34a;}
+.tag-orange{background:rgba(217,119,6,0.08); color:#d97706;}
+.tag-red{background:rgba(220,38,38,0.08); color:#dc2626;}
+.tag-purple{background:rgba(124,58,237,0.08); color:#7c3aed;}
+
+/* cards */
+.card-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
+.card{background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+  padding:18px 22px; box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.card.blue{border-top:3px solid #2563eb;}
+.card.green{border-top:3px solid #16a34a;}
+.card.orange{border-top:3px solid #d97706;}
+.card.purple{border-top:3px solid #7c3aed;}
+.card.red{border-top:3px solid #dc2626;}
+.card-title{font-weight:700; margin-bottom:8px; font-size:15px;}
+.card.blue .card-title{color:#2563eb;}
+.card.green .card-title{color:#16a34a;}
+.card.orange .card-title{color:#d97706;}
+.card.purple .card-title{color:#7c3aed;}
+.card.red .card-title{color:#dc2626;}
+.card p{font-size:13px; color:var(--text-muted); margin:0;}
+
+/* steps */
+.steps{margin-bottom:10px;}
+.step-row{display:flex; gap:16px;}
+.step-connector{display:flex; flex-direction:column; align-items:center;}
+.step-dot{width:30px; height:30px; border-radius:50%; border:2px solid; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;}
+.step-dot.blue{background:rgba(37,99,235,0.08); border-color:#2563eb; color:#2563eb;}
+.step-dot.green{background:rgba(22,163,74,0.08); border-color:#16a34a; color:#16a34a;}
+.step-dot.orange{background:rgba(217,119,6,0.08); border-color:#d97706; color:#d97706;}
+.step-dot.purple{background:rgba(124,58,237,0.08); border-color:#7c3aed; color:#7c3aed;}
+.step-dot.red{background:rgba(220,38,38,0.08); border-color:#dc2626; color:#dc2626;}
+.step-line{width:2px; flex:1; background:var(--border); min-height:18px; margin:4px 0;}
+.step-content{padding-bottom:22px;}
+.step-label{font-weight:700; font-size:15px; margin-bottom:4px;}
+.step-desc{font-size:13.5px; color:var(--text-muted);}
+.step-desc code{background:var(--bg3); padding:1px 5px; border-radius:4px; font-size:12px;}
+
+/* branch */
+.branch{display:flex; align-items:flex-start; gap:10px; background:var(--bg3);
+  border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-bottom:10px;}
+.branch-label{font-size:11px; font-weight:700; padding:2px 7px; border-radius:4px;
+  flex-shrink:0; margin-top:1px;}
+.yes{background:rgba(22,163,74,0.1); color:#16a34a;}
+.no{background:rgba(220,38,38,0.1); color:#dc2626;}
+.branch-content{font-size:13.5px;}
+
+/* alert */
+.alert{border-radius:10px; padding:14px 18px; font-size:13.5px;
+  display:flex; gap:12px; margin-bottom:16px;}
+.alert.tip{background:rgba(37,99,235,0.05); border:1px solid rgba(37,99,235,0.15);}
+.alert.warn{background:rgba(217,119,6,0.05); border:1px solid rgba(217,119,6,0.15);}
+.alert.success{background:rgba(22,163,74,0.05); border:1px solid rgba(22,163,74,0.15);}
+.alert-icon{flex-shrink:0;}
+.alert-text{color:var(--text-muted);}
+.alert-text strong{color:var(--text);}
+
+/* code block */
+.code-block{background:#f8fafc; border:1px solid var(--border); border-radius:8px;
+  padding:14px 18px; font-family:'JetBrains Mono',monospace; font-size:12.5px;
+  color:#334155; line-height:1.7; overflow-x:auto; margin-bottom:16px;}
+.kw{color:#2563eb;} .val{color:#16a34a;} .cm{color:#94a3b8;} .hl{color:#d97706;}
+
+/* arch diagram wrapper */
+.arch-wrap{background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+  padding:20px; margin-bottom:16px; overflow-x:auto;}
+.arch-wrap svg{width:100%; min-width:680px; height:auto; display:block;}
+
+/* floating TOC */
+.toc-toggle{position:fixed; z-index:101; right:24px; bottom:24px;
+  width:52px; height:52px; border-radius:50%; border:none;
+  background:var(--accent-blue); color:#fff; cursor:grab;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 4px 12px rgba(37,99,235,0.35),0 2px 4px rgba(0,0,0,0.1);
+  transition:box-shadow 0.2s ease; touch-action:none; user-select:none; -webkit-user-select:none;}
+.toc-toggle:hover{box-shadow:0 6px 16px rgba(37,99,235,0.45);}
+.toc-toggle.dragging{cursor:grabbing; box-shadow:0 8px 24px rgba(37,99,235,0.55); transition:none;}
+.toc-toggle svg{width:22px; height:22px; fill:#fff; pointer-events:none;}
+.toc-toggle .icon-close{display:none;}
+.toc-open .toc-toggle .icon-menu{display:none;}
+.toc-open .toc-toggle .icon-close{display:block;}
+.toc-backdrop{position:fixed; inset:0; background:rgba(15,23,42,0.4); opacity:0;
+  pointer-events:none; transition:opacity 0.25s ease; z-index:99; backdrop-filter:blur(2px);}
+.toc-open .toc-backdrop{opacity:1; pointer-events:auto;}
+.toc-panel{position:fixed; z-index:100; width:280px; max-height:calc(100vh - 120px);
+  background:var(--accent-blue); border-radius:16px; padding:16px 14px; overflow-y:auto;
+  box-shadow:0 12px 32px rgba(37,99,235,0.25),0 4px 12px rgba(0,0,0,0.12);
+  opacity:0; transform:scale(0.96); pointer-events:none;
+  transition:opacity 0.2s ease, transform 0.2s ease;
+  right:24px; bottom:88px; transform-origin:bottom right;}
+.toc-open .toc-panel{opacity:1; transform:scale(1); pointer-events:auto;}
+.toc-header{display:flex; align-items:center; gap:8px; padding:6px 10px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.15); color:#fff; font-size:14px;
+  font-weight:700; margin-bottom:8px;}
+.toc-list{display:flex; flex-direction:column; gap:6px;}
+.toc-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px;
+  background:rgba(255,255,255,0.08); color:#fff; text-decoration:none; font-size:13px;
+  font-weight:500; transition:background 0.15s ease, transform 0.15s ease; cursor:pointer;}
+.toc-item:hover{background:rgba(255,255,255,0.15); transform:translateX(2px);}
+.toc-item.active{background:#fff; color:var(--accent-blue); font-weight:700;}
+.toc-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+.toc-dot.blue{background:#60a5fa;} .toc-dot.green{background:#4ade80;}
+.toc-dot.orange{background:#fbbf24;} .toc-dot.purple{background:#c084fc;}
+.toc-dot.red{background:#f87171;}
+.toc-item.active .toc-dot.blue{background:var(--accent-blue);}
+.toc-item.active .toc-dot.green{background:var(--accent-green);}
+.toc-item.active .toc-dot.orange{background:var(--accent-orange);}
+.toc-item.active .toc-dot.purple{background:var(--accent-purple);}
+.toc-item.active .toc-dot.red{background:var(--accent-red);}
+
+/* language switch */
+.lang-switch{display:flex; gap:6px; margin-bottom:18px;}
+.lang-switch a{font-size:12px; font-weight:600; padding:4px 12px; border-radius:16px;
+  text-decoration:none; border:1px solid var(--border); color:var(--text-muted); background:var(--bg2);}
+.lang-switch a.active{background:var(--accent-blue); color:#fff; border-color:var(--accent-blue);}
+
+@media (max-width:640px){
+  body{padding:24px 14px;}
+  .doc-title{font-size:24px;}
+  .card-grid{grid-template-columns:1fr;}
+  .toc-panel{width:auto; max-height:70vh;}
+  .toc-toggle{right:16px; bottom:16px; width:48px; height:48px;}
+}
+</style>
+</head>
+<body>
+
+<div class="toc-backdrop"></div>
+<button class="toc-toggle" type="button" aria-label="Table of contents">
+  <svg class="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+  <svg class="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+</button>
+<nav class="toc-panel" aria-label="Document outline">
+  <div class="toc-header">📑 Contents</div>
+  <div class="toc-list">
+    <a class="toc-item" href="#sec1"><span class="toc-dot blue"></span>① The Problem It Solves</a>
+    <a class="toc-item" href="#sec2"><span class="toc-dot green"></span>② Architecture Diagram</a>
+    <a class="toc-item" href="#sec3"><span class="toc-dot orange"></span>③ Life of a Message</a>
+    <a class="toc-item" href="#sec4"><span class="toc-dot purple"></span>④ Multi-Tab Routing</a>
+    <a class="toc-item" href="#sec5"><span class="toc-dot red"></span>⑤ Return &amp; Completion</a>
+    <a class="toc-item" href="#sec6"><span class="toc-dot blue"></span>⑥ Quick Start</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <header class="doc-header">
+    <div class="lang-switch">
+      <a href="TG_ITERM_AI_FLOW.html">中文</a>
+      <a href="TG_ITERM_AI_FLOW.en.html" class="active">English</a>
+      <a href="TG_ITERM_AI_FLOW.ja.html">日本語</a>
+    </div>
+    <span class="doc-kicker">mob-remote · The Missing README Chapter</span>
+    <h1 class="doc-title">Drive Claude Code / Codex Inside iTerm2 Remotely via Telegram</h1>
+    <p class="doc-sub">
+      Send one line to a Telegram bot from your phone → it is auto-injected into an iTerm2 tab on your Mac
+      that is already running <strong>Claude Code / Codex</strong> → the AI executes → the assistant's reply is
+      pushed back to Telegram. Command the AI coding assistant in your terminal even when you're away from the keyboard.
+    </p>
+    <div class="doc-meta">
+      <span class="tag tag-blue">tg-relay inbound</span>
+      <span class="tag tag-purple">term-bridge inject/capture</span>
+      <span class="tag tag-green">tg-notify outbound</span>
+      <span class="tag tag-orange">macOS · iTerm2 · AppleScript</span>
+    </div>
+  </header>
+
+  <!-- OUTLINE MINDMAP -->
+  <div class="outline-block">
+    <div class="outline-title">📑 Document Outline</div>
+    <svg class="mindmap" viewBox="0 0 880 440" xmlns="http://www.w3.org/2000/svg">
+      <!-- center -->
+      <rect x="340" y="195" width="200" height="52" rx="26" fill="rgba(37,99,235,0.1)" stroke="#2563eb" stroke-width="2"/>
+      <text x="440" y="227" text-anchor="middle" fill="#2563eb" font-size="14" font-weight="700" font-family="Inter,sans-serif">TG → AI Terminal Bridge</text>
+
+      <!-- ① left-top -->
+      <a href="#sec1">
+        <line x1="340" y1="215" x2="190" y2="80" stroke="#2563eb" stroke-width="2" opacity="0.5"/>
+        <rect x="58" y="58" width="152" height="38" rx="19" fill="rgba(37,99,235,0.08)" stroke="#2563eb" stroke-width="1.5"/>
+        <text x="134" y="82" text-anchor="middle" fill="#2563eb" font-size="11.5" font-weight="600" font-family="Inter,sans-serif">① The Problem</text>
+      </a>
+      <!-- ② left-mid -->
+      <a href="#sec2">
+        <line x1="340" y1="221" x2="180" y2="200" stroke="#16a34a" stroke-width="2" opacity="0.5"/>
+        <rect x="56" y="181" width="144" height="38" rx="19" fill="rgba(22,163,74,0.08)" stroke="#16a34a" stroke-width="1.5"/>
+        <text x="128" y="205" text-anchor="middle" fill="#16a34a" font-size="11.5" font-weight="600" font-family="Inter,sans-serif">② Architecture</text>
+      </a>
+      <!-- ③ left-bottom -->
+      <a href="#sec3">
+        <line x1="340" y1="227" x2="190" y2="360" stroke="#d97706" stroke-width="2" opacity="0.5"/>
+        <rect x="50" y="342" width="162" height="38" rx="19" fill="rgba(217,119,6,0.08)" stroke="#d97706" stroke-width="1.5"/>
+        <text x="131" y="366" text-anchor="middle" fill="#d97706" font-size="11.5" font-weight="600" font-family="Inter,sans-serif">③ Message Lifecycle</text>
+      </a>
+      <!-- ④ right-top -->
+      <a href="#sec4">
+        <line x1="540" y1="215" x2="690" y2="80" stroke="#7c3aed" stroke-width="2" opacity="0.5"/>
+        <rect x="660" y="58" width="158" height="38" rx="19" fill="rgba(124,58,237,0.08)" stroke="#7c3aed" stroke-width="1.5"/>
+        <text x="739" y="82" text-anchor="middle" fill="#7c3aed" font-size="11.5" font-weight="600" font-family="Inter,sans-serif">④ Multi-Tab Routing</text>
+      </a>
+      <!-- ⑤ right-mid -->
+      <a href="#sec5">
+        <line x1="540" y1="221" x2="700" y2="200" stroke="#dc2626" stroke-width="2" opacity="0.5"/>
+        <rect x="664" y="181" width="166" height="38" rx="19" fill="rgba(220,38,38,0.08)" stroke="#dc2626" stroke-width="1.5"/>
+        <text x="747" y="205" text-anchor="middle" fill="#dc2626" font-size="11.5" font-weight="600" font-family="Inter,sans-serif">⑤ Return &amp; Completion</text>
+      </a>
+      <!-- ⑥ right-bottom -->
+      <a href="#sec6">
+        <line x1="540" y1="227" x2="690" y2="360" stroke="#2563eb" stroke-width="2" opacity="0.5"/>
+        <rect x="668" y="342" width="150" height="38" rx="19" fill="rgba(37,99,235,0.08)" stroke="#2563eb" stroke-width="1.5"/>
+        <text x="743" y="366" text-anchor="middle" fill="#2563eb" font-size="11.5" font-weight="600" font-family="Inter,sans-serif">⑥ Quick Start</text>
+      </a>
+    </svg>
+  </div>
+
+  <!-- SEC 1 -->
+  <section id="sec1">
+    <div class="section-title">① The Problem It Solves</div>
+    <p>
+      The README documents device commands like <code>/shot</code> and <code>/tap</code>, but it
+      <strong>leaves out the strongest path</strong>: turning Telegram into a "remote control for your AI coding
+      assistant." You're out, your Mac is at home, and iTerm2 already has Claude Code / Codex sessions running —
+      now you can hand them tasks from your phone and get the AI's answers back.
+    </p>
+    <div class="card-grid">
+      <div class="card red">
+        <div class="card-title">❌ Without this path</div>
+        <p>You must sit at the machine, switch to the right iTerm tab, type to Claude Code by hand, and wait at the desk to see results. Leave your seat and you're disconnected.</p>
+      </div>
+      <div class="card green">
+        <div class="card-title">✅ With this path</div>
+        <p>Send "<code>[t3] fix the login bug</code>" from your phone → it lands in the Claude Code in tab 3 → the AI works → the reply is pushed back to Telegram. Keep an eye on several projects even on your commute.</p>
+      </div>
+    </div>
+    <div class="alert tip">
+      <span class="alert-icon">💡</span>
+      <div class="alert-text"><strong>Core idea</strong>: this isn't "remote SSH" — it's a <strong>two-way bridge</strong>.
+      Telegram text goes in, the AI assistant's reply comes out, with iTerm2's AppleScript injection and screen-buffer capture connecting the two ends.</div>
+    </div>
+  </section>
+
+  <!-- SEC 2 -->
+  <section id="sec2">
+    <div class="section-title s2">② Architecture Diagram</div>
+    <p>Three stages: <strong>inbound tg-relay</strong> → <strong>term-bridge inject/capture</strong> → <strong>outbound tg-notify</strong>, with the actual working iTerm2 tab in the middle.</p>
+    <div class="arch-wrap">
+      <svg viewBox="0 0 820 360" xmlns="http://www.w3.org/2000/svg" font-family="Inter,sans-serif">
+        <defs>
+          <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/>
+          </marker>
+        </defs>
+
+        <!-- Phone zone -->
+        <rect x="14" y="40" width="150" height="280" rx="14" fill="#f8f9fb" stroke="#e2e6ed"/>
+        <text x="89" y="64" text-anchor="middle" font-size="11.5" font-weight="700" fill="#64748b">📱 Phone · Telegram</text>
+        <rect x="30" y="86" width="118" height="64" rx="10" fill="rgba(37,99,235,0.08)" stroke="#2563eb" stroke-width="1.5"/>
+        <text x="89" y="112" text-anchor="middle" font-size="12" font-weight="600" fill="#2563eb">You send a line</text>
+        <text x="89" y="132" text-anchor="middle" font-size="10" fill="#64748b">[t3] fix login bug</text>
+        <rect x="30" y="214" width="118" height="64" rx="10" fill="rgba(22,163,74,0.08)" stroke="#16a34a" stroke-width="1.5"/>
+        <text x="89" y="240" text-anchor="middle" font-size="12" font-weight="600" fill="#16a34a">Get AI reply</text>
+        <text x="89" y="260" text-anchor="middle" font-size="10" fill="#64748b">+ optional screenshot</text>
+
+        <!-- Mac zone -->
+        <rect x="200" y="20" width="412" height="320" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-dasharray="5 4"/>
+        <text x="406" y="42" text-anchor="middle" font-size="11.5" font-weight="700" fill="#475569">💻 Mac · mob-remote daemons</text>
+
+        <!-- inbound -->
+        <rect x="222" y="70" width="170" height="74" rx="10" fill="rgba(37,99,235,0.06)" stroke="#2563eb" stroke-width="1.5"/>
+        <text x="307" y="94" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2563eb">tg-relay</text>
+        <text x="307" y="113" text-anchor="middle" font-size="10" fill="#64748b">poll bot · parse prefix</text>
+        <text x="307" y="130" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="'JetBrains Mono',monospace">iterm_route.py</text>
+
+        <!-- inject -->
+        <rect x="222" y="166" width="170" height="64" rx="10" fill="rgba(124,58,237,0.06)" stroke="#7c3aed" stroke-width="1.5"/>
+        <text x="307" y="190" text-anchor="middle" font-size="12.5" font-weight="700" fill="#7c3aed">iterm-inject</text>
+        <text x="307" y="208" text-anchor="middle" font-size="10" fill="#64748b">AppleScript type + Enter</text>
+
+        <!-- iterm tab -->
+        <rect x="430" y="120" width="160" height="92" rx="10" fill="rgba(217,119,6,0.06)" stroke="#d97706" stroke-width="1.8"/>
+        <text x="510" y="146" text-anchor="middle" font-size="12.5" font-weight="700" fill="#d97706">iTerm2 · tab 3</text>
+        <text x="510" y="166" text-anchor="middle" font-size="11" fill="#1e293b" font-weight="600">Claude Code</text>
+        <text x="510" y="183" text-anchor="middle" font-size="11" fill="#1e293b" font-weight="600">/ Codex</text>
+        <text x="510" y="201" text-anchor="middle" font-size="9.5" fill="#94a3b8">AI executes</text>
+
+        <!-- monitor -->
+        <rect x="222" y="252" width="170" height="68" rx="10" fill="rgba(220,38,38,0.06)" stroke="#dc2626" stroke-width="1.5"/>
+        <text x="307" y="276" text-anchor="middle" font-size="12.5" font-weight="700" fill="#dc2626">iterm-monitor</text>
+        <text x="307" y="294" text-anchor="middle" font-size="10" fill="#64748b">poll buffer · extract reply</text>
+        <text x="307" y="311" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="'JetBrains Mono',monospace">iterm_extract.py</text>
+
+        <!-- outbound -->
+        <rect x="430" y="252" width="160" height="68" rx="10" fill="rgba(22,163,74,0.06)" stroke="#16a34a" stroke-width="1.5"/>
+        <text x="510" y="280" text-anchor="middle" font-size="12.5" font-weight="700" fill="#16a34a">tg-notify send</text>
+        <text x="510" y="299" text-anchor="middle" font-size="10" fill="#64748b">push reply to private chat</text>
+
+        <!-- log buffer -->
+        <rect x="628" y="120" width="172" height="92" rx="10" fill="#f0f2f5" stroke="#cbd5e1"/>
+        <text x="714" y="150" text-anchor="middle" font-size="11" font-weight="700" fill="#475569">Local log buffer</text>
+        <text x="714" y="170" text-anchor="middle" font-size="9.5" fill="#94a3b8" font-family="'JetBrains Mono',monospace">inbox/iterm-</text>
+        <text x="714" y="184" text-anchor="middle" font-size="9.5" fill="#94a3b8" font-family="'JetBrains Mono',monospace">session-*.log</text>
+        <text x="714" y="202" text-anchor="middle" font-size="9.5" fill="#94a3b8">avoids truncation</text>
+
+        <!-- arrows -->
+        <line x1="148" y1="118" x2="220" y2="105" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <line x1="307" y1="144" x2="307" y2="164" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <line x1="392" y1="190" x2="428" y2="178" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <line x1="590" y1="170" x2="626" y2="170" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <path d="M510,212 C510,235 380,232 392,275" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <line x1="392" y1="286" x2="428" y2="286" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ah)"/>
+        <path d="M430,300 C300,330 180,320 148,250" fill="none" stroke="#16a34a" stroke-width="1.6" marker-end="url(#ah)" opacity="0.6"/>
+      </svg>
+    </div>
+    <table>
+      <thead><tr><th>Role</th><th>Component / File</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-blue">inbound</span></td><td><code>tg-relay/</code> · <code>iterm_route.py</code></td><td>Polls the Telegram bot, parses the message prefix, decides which tab to route to, strips the prefix and keeps only the body</td></tr>
+        <tr><td><span class="tag tag-purple">inject</span></td><td><code>term-bridge/iterm-inject.py</code></td><td>Uses <code>osascript</code> AppleScript to type the body into the target window/tab/session and press Enter</td></tr>
+        <tr><td><span class="tag tag-orange">execute</span></td><td><strong>Claude Code / Codex</strong> inside the iTerm2 tab</td><td>Treats the injected text as a prompt and actually reads code, edits files, runs commands</td></tr>
+        <tr><td><span class="tag tag-red">capture</span></td><td><code>iterm-monitor.py</code> · <code>iterm_extract.py</code></td><td>Polls the screen buffer, extracts "the assistant's latest reply," judges whether the answer is finished</td></tr>
+        <tr><td><span class="tag tag-green">outbound</span></td><td><code>tg-notify send</code></td><td>Sends the extracted reply back to your Telegram private chat (same bot)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SEC 3 -->
+  <section id="sec3">
+    <div class="section-title s3">③ Life of a Message</div>
+    <p>From the moment you hit send until the AI reply pops back to your phone, it passes through 5 stages:</p>
+    <div class="steps">
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot blue">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">Send + parse prefix</div>
+          <div class="step-desc"><code>tg-relay</code> receives <code>[t3] fix login bug</code>; <code>parse_routed_message()</code> recognizes the prefix <code>[t3]</code> → target <code>w1/t3</code>, and strips the body down to "fix login bug".</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot purple">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">Inject into the iTerm2 tab</div>
+          <div class="step-desc"><code>iterm-inject.py</code> uses AppleScript to locate the active session of window 1 / tab 3 and <code>write text</code> the body plus Enter — like "typing into that tab on your behalf." It also backs up to <code>inbox/pending.txt</code>.</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot orange">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">Claude Code / Codex executes</div>
+          <div class="step-desc">The AI running in that tab takes the line as a prompt and starts reading code, editing, running commands. Output is also written to the local log buffer <code>inbox/iterm-session-*.log</code> so long replies aren't cut off by iTerm's default line limit.</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot red">4</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">Capture after a delay</div>
+          <div class="step-desc"><code>TG_ITERM_MONITOR_AFTER</code> seconds after injection (default ~45s), <code>iterm-monitor</code> starts polling the screen buffer and uses <code>extract_latest_reply()</code> to filter out prompts and pull out just the assistant's answer.</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot green">5</div></div>
+        <div class="step-content">
+          <div class="step-label">Return to Telegram</div>
+          <div class="step-desc">Once it detects the reply is "done," it pushes it back to your private chat via <code>tg-notify send</code>. If there's no new output for a long time, it can fall back to sending an iTerm screenshot.</div>
+        </div>
+      </div>
+    </div>
+    <div class="code-block">
+<span class="cm"># The round trip as seen on your phone</span><br>
+<span class="kw">you</span> ▸ [t3] fix the login endpoint returning 500<br>
+<span class="hl">bot</span> ▸ typed into iTerm tab 3 (../myapp (-zsh))   <span class="cm">; injected</span><br>
+<span class="cm">        …… (after ~45s) ……</span><br>
+<span class="val">bot</span> ▸ Found it: login.py wasn't catching KeyError on token<br>
+<span class="val">    </span>   parse. Added try/except + a test, 3 cases pass ✅
+    </div>
+  </section>
+
+  <!-- SEC 4 -->
+  <section id="sec4">
+    <div class="section-title s4">④ Multi-Tab Routing: Who Gets the Message</div>
+    <p>You might have several tabs open, each for a different project, each running its own AI session. A <strong>message prefix</strong> decides which tab the line goes to — switch back and forth within one conversation, no config changes needed.</p>
+    <table>
+      <thead><tr><th>Method</th><th>Syntax</th><th>Example</th><th>Rule</th></tr></thead>
+      <tbody>
+        <tr><td>By tab number</td><td><code>[tN]</code> / <code>#N</code> / <code>@tN:</code></td><td><code>[t3] list dir</code></td><td>Most common, N = tab index</td></tr>
+        <tr><td>By directory/project name</td><td><code>[name]</code> / <code>@name:</code></td><td><code>[myapp] run tests</code></td><td>Fuzzy match against the directory fragment in the tab title</td></tr>
+        <tr><td>By .env alias</td><td><code>[alias]</code></td><td><code>[fz] check deploy</code></td><td>Exact mapping, most reliable when dir names collide</td></tr>
+        <tr><td>No prefix</td><td>(just the body)</td><td><code>check git status</code></td><td>Falls to the <code>.env</code> default tab</td></tr>
+      </tbody>
+    </table>
+    <div class="code-block">
+<span class="cm"># .env —— exact aliases for duplicate dir names (alias:window:tab)</span><br>
+<span class="kw">TG_ITERM_ALIASES</span>=<span class="val">fz:1:7,myapp:1:11,api:1:6</span>
+    </div>
+    <p><strong>Routing decision</strong> (logic inside <code>iterm_route.py</code>):</p>
+    <div class="branch"><span class="branch-label no">no prefix</span><div class="branch-content">→ use the <code>.env</code> default tab from <code>TG_ITERM_WINDOW</code> / <code>TG_ITERM_TAB</code></div></div>
+    <div class="branch"><span class="branch-label yes">prefix is a number</span><div class="branch-content">→ locate by tab index (when the same index is ambiguous, prefer window 1)</div></div>
+    <div class="branch"><span class="branch-label yes">prefix is alias/name</span><div class="branch-content">→ check <code>TG_ITERM_ALIASES</code> first, then fuzzy-match the title; with multiple candidates, take the shortest name (most specific)</div></div>
+    <div class="alert tip">
+      <span class="alert-icon">🧭</span>
+      <div class="alert-text">Send <code>/tabs</code> from your phone and the bot lists all current iTerm tabs with suggested prefixes — no need to memorize indices.</div>
+    </div>
+  </section>
+
+  <!-- SEC 5 -->
+  <section id="sec5">
+    <div class="section-title s5">⑤ Return &amp; Completion (the trickiest part)</div>
+    <p>The hard part: terminal output is streaming — how do you know the AI is "done" and which segment to send back? <code>iterm-monitor.py</code> judges with three signals:</p>
+    <div class="card-grid">
+      <div class="card blue">
+        <div class="card-title">① Completion marker</div>
+        <p><code>is_reply_complete()</code> recognizes the signs of Claude Code / Codex finishing an answer (prompt returns, end markers); a hit means it's done writing.</p>
+      </div>
+      <div class="card orange">
+        <div class="card-title">② Stable polling</div>
+        <p>If the captured content stops changing for <code>TG_ITERM_MONITOR_STABLE_POLLS</code> consecutive polls (default 2), the output is considered stable and ready to send.</p>
+      </div>
+      <div class="card green">
+        <div class="card-title">③ Dedup</div>
+        <p>If the extracted result equals "the last sent" one (the <code>last-sent</code> state file), it's skipped — avoiding the same reply flooding the chat.</p>
+      </div>
+      <div class="card red">
+        <div class="card-title">④ Screenshot fallback</div>
+        <p>If for more than <code>TG_ITERM_MONITOR_SCREENSHOT_IDLE</code> seconds (default 60) there's neither new text nor an extractable reply, it sends an iTerm screenshot instead.</p>
+      </div>
+    </div>
+    <div class="alert warn">
+      <span class="alert-icon">⚠️</span>
+      <div class="alert-text"><strong>Only the assistant reply, no noise</strong>: <code>extract_latest_reply()</code> filters out shell prompts, the text you injected, progress bars, etc., aiming to return only the AI's actual answer. Each tab has its own state files <code>inbox/iterm-monitor-w1-t{N}.*</code> so they never cross-talk.</div>
+    </div>
+    <div class="alert warn">
+      <span class="alert-icon">🔒</span>
+      <div class="alert-text"><strong>Return goes to a private chat</strong>: <code>iterm-monitor</code> requires <code>TELEGRAM_CHAT_ID</code> to be a positive number (private chat); a group (negative) is rejected — to avoid leaking code/output into a group.</div>
+    </div>
+  </section>
+
+  <!-- SEC 6 -->
+  <section id="sec6">
+    <div class="section-title s6">⑥ Quick Start</div>
+    <p>Prerequisites: Bot Token and Chat ID configured per <code>docs/TELEGRAM_SETUP.md</code>, and an iTerm2 tab already open running Claude Code / Codex.</p>
+    <div class="steps">
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot blue">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">Configure .env to enable injection</div>
+          <div class="step-desc"><code>TG_RELAY_ITERM_INJECT=1</code> (natural language → injection), <code>TG_ITERM_MONITOR_AFTER=45</code> (how long after injection to start capturing the return).</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot green">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">Increase the iTerm scrollback (once)</div>
+          <div class="step-desc"><code>./mob iterm-buffer-setup</code> — avoids long replies being cut off by the default 1000-line limit.</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot orange">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">See which tabs you have</div>
+          <div class="step-desc"><code>./mob iterm-list</code> — lists each tab's index, title, and suggested prefix/alias.</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot purple">4</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-label">Start the full stack</div>
+          <div class="step-desc"><code>./mob up</code> — launches both <code>tg-relay</code> (receive) and <code>iterm-monitor</code> (return output).</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-connector"><div class="step-dot red">5</div></div>
+        <div class="step-content">
+          <div class="step-label">Send from your phone</div>
+          <div class="step-desc">In Telegram send <code>[t3] refactor this function for me</code>; about 45s later Claude Code's answer comes back to your phone.</div>
+        </div>
+      </div>
+    </div>
+    <div class="code-block">
+<span class="cm"># Local CLI cheat sheet</span><br>
+./mob up                 <span class="cm"># start relay + monitor</span><br>
+./mob down               <span class="cm"># stop</span><br>
+./mob iterm-list         <span class="cm"># list tabs</span><br>
+./mob iterm-route <span class="val">"[myapp] test"</span>   <span class="cm"># test route parsing locally</span>
+    </div>
+    <div class="alert success">
+      <span class="alert-icon">✅</span>
+      <div class="alert-text"><strong>One line to remember it</strong>: Telegram is the remote control, the Claude Code / Codex in the iTerm2 tab is the robot arm,
+      and <code>term-bridge</code> is the cable connecting them — text goes in, the AI's reply comes out.</div>
+    </div>
+    <div class="alert tip">
+      <span class="alert-icon">📚</span>
+      <div class="alert-text">Further reading: <code>docs/ITERM_MULTI_TAB.md</code> (full multi-tab routing guide) · <code>docs/TELEGRAM_SETUP.md</code> (Token / Chat ID setup).</div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const toggleBtn = document.querySelector('.toc-toggle');
+  const panel = document.querySelector('.toc-panel');
+  const backdrop = document.querySelector('.toc-backdrop');
+  function closeTOC(){ document.body.classList.remove('toc-open'); }
+  function toggleTOC(){ document.body.classList.toggle('toc-open'); }
+  backdrop.addEventListener('click', closeTOC);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeTOC(); });
+
+  const DRAG_THRESHOLD = 5, MARGIN = 8;
+  let dragState = null;
+  function updatePanelPosition(){
+    const rect = toggleBtn.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const panelW = Math.min(280, vw - 32);
+    const panelH = panel.offsetHeight || 400;
+    const gap = 12; let left, top, transformOrigin;
+    if(rect.left + rect.width/2 < vw/2){ left = rect.left; transformOrigin = 'left'; }
+    else { left = rect.right - panelW; transformOrigin = 'right'; }
+    if(rect.top + rect.height/2 < vh/2){ top = rect.bottom + gap; transformOrigin = 'top ' + transformOrigin; }
+    else { top = rect.top - panelH - gap; transformOrigin = 'bottom ' + transformOrigin; }
+    left = Math.max(MARGIN, Math.min(left, vw - panelW - MARGIN));
+    top = Math.max(MARGIN, Math.min(top, vh - panelH - MARGIN));
+    Object.assign(panel.style, { left:left+'px', top:top+'px', right:'auto', bottom:'auto', width:panelW+'px', transformOrigin });
+  }
+  function setButtonPosition(x, y){
+    const rect = toggleBtn.getBoundingClientRect(); const btnSize = rect.width;
+    x = Math.max(MARGIN, Math.min(x, window.innerWidth - btnSize - MARGIN));
+    y = Math.max(MARGIN, Math.min(y, window.innerHeight - btnSize - MARGIN));
+    Object.assign(toggleBtn.style, { left:x+'px', top:y+'px', right:'auto', bottom:'auto' });
+    try{ sessionStorage.setItem('tocBtnPos', JSON.stringify({x, y})); }catch(e){}
+  }
+  function getPointerCoords(e){
+    if(e.touches?.length) return { x:e.touches[0].clientX, y:e.touches[0].clientY };
+    if(e.changedTouches?.length) return { x:e.changedTouches[0].clientX, y:e.changedTouches[0].clientY };
+    return { x:e.clientX, y:e.clientY };
+  }
+  function onPointerDown(e){
+    const rect = toggleBtn.getBoundingClientRect(); const p = getPointerCoords(e);
+    dragState = { startX:p.x, startY:p.y, btnX:rect.left, btnY:rect.top, moved:false };
+    if(document.body.classList.contains('toc-open')) closeTOC();
+    e.preventDefault();
+  }
+  function onPointerMove(e){
+    if(!dragState) return; const p = getPointerCoords(e);
+    const dx = p.x - dragState.startX, dy = p.y - dragState.startY;
+    if(!dragState.moved && Math.hypot(dx,dy) > DRAG_THRESHOLD){ dragState.moved = true; toggleBtn.classList.add('dragging'); }
+    if(dragState.moved){ setButtonPosition(dragState.btnX + dx, dragState.btnY + dy); e.preventDefault(); }
+  }
+  function onPointerUp(){
+    if(!dragState) return; const wasMoved = dragState.moved; dragState = null;
+    toggleBtn.classList.remove('dragging');
+    if(!wasMoved){ toggleTOC(); if(document.body.classList.contains('toc-open')) updatePanelPosition(); }
+  }
+  toggleBtn.addEventListener('mousedown', onPointerDown);
+  toggleBtn.addEventListener('touchstart', onPointerDown, { passive:false });
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('touchmove', onPointerMove, { passive:false });
+  window.addEventListener('mouseup', onPointerUp);
+  window.addEventListener('touchend', onPointerUp);
+  try{ const saved = sessionStorage.getItem('tocBtnPos'); if(saved){ const pos = JSON.parse(saved); setButtonPosition(pos.x, pos.y); } }catch(e){}
+  window.addEventListener('resize', ()=>{
+    const rect = toggleBtn.getBoundingClientRect();
+    if(toggleBtn.style.left) setButtonPosition(rect.left, rect.top);
+    if(document.body.classList.contains('toc-open')) updatePanelPosition();
+  });
+  document.querySelectorAll('.toc-item').forEach(a=>a.addEventListener('click', closeTOC));
+  const tocLinks = document.querySelectorAll('.toc-item');
+  const sections = [...tocLinks].map(a => document.querySelector(a.getAttribute('href')));
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){ const id = entry.target.id;
+        tocLinks.forEach(a=>a.classList.toggle('active', a.getAttribute('href')==='#'+id)); }
+    });
+  }, { rootMargin:'-20% 0px -70% 0px' });
+  sections.forEach(sec=>sec && observer.observe(sec));
+</script>
+</body>
+</html>

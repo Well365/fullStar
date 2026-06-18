@@ -1,0 +1,195 @@
+# mob-remote
+
+**Telegram 远程 + Android (droid-ctl) + iOS (iphone-ctl/WDA)** 自包含封装包。
+
+可单独克隆、分发、运行，不依赖任何外部业务项目。
+
+> **Telegram 配置** → [docs/TELEGRAM_SETUP.md](docs/TELEGRAM_SETUP.md)（中/En/日）  
+> **远程驱动 Claude Code / Codex** → [可视化说明页](docs/TG_ITERM_AI_FLOW.html) · [docs/ITERM_MULTI_TAB.md](docs/ITERM_MULTI_TAB.md)  
+> **依赖与安装** → [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) · [docs/INSTALL.md](docs/INSTALL.md)
+
+## 远程驱动 Claude Code / Codex（iTerm 注入回传）
+
+把 Telegram 当成「AI 编程助手的遥控器」：手机发一句话 → 自动注入到 Mac 上某个正在跑
+**Claude Code / Codex** 的 iTerm2 标签页 → AI 执行 → 助手回复自动回传 Telegram。人不在电脑前也能隔空指挥多个项目的 AI 会话。
+
+```
+📱 你发 [t3] 修登录bug
+        │  tg-relay 解析前缀 (iterm_route.py)
+        ▼
+   iterm-inject  ── AppleScript 键入+回车 ──►  iTerm2 · tab 3
+                                                 └─ Claude Code / Codex 执行
+                                                       │ 输出 → inbox/iterm-session-*.log
+        ┌────────────────────────────────────────────┘
+        ▼
+   iterm-monitor ── 提取助手回复 (iterm_extract.py) ──►  tg-notify send
+        │
+        ▼
+📱 收到 AI 回复（+ 长时间无输出时改发截图兜底）
+```
+
+**消息前缀决定发给哪个 tab**（一段对话里随意切换，无需改配置）：
+
+| 写法 | 示例 | 说明 |
+|------|------|------|
+| `[tN]` / `#N` / `@tN:` | `[t3] 列目录` | 按标签序号，最常用 |
+| `[名字]` / `@名字:` | `[myapp] 跑测试` | 模糊匹配 tab 标题目录片段 |
+| `[别名]` | `[fz] 看部署` | `.env` 的 `TG_ITERM_ALIASES` 精确映射 |
+| 无前缀 | `看下 git 状态` | 落到 `.env` 默认 tab |
+
+**启用**（前置：已配好 Bot Token / Chat ID）：
+
+```bash
+# .env
+TG_RELAY_ITERM_INJECT=1      # 自然语言 → 注入 iTerm
+TG_ITERM_MONITOR_AFTER=45    # 注入后多久开始抓取回传
+
+./mob iterm-buffer-setup     # 增大滚动缓冲，避免长回复被截断（一次）
+./mob iterm-list             # 查看 tab 序号 / 推荐前缀
+./mob up                     # 同时启动 tg-relay（收）+ iterm-monitor（回传）
+```
+
+> 完整说明：**[可视化流程说明页](docs/TG_ITERM_AI_FLOW.html)**（架构图 + 消息生命周期 + 完成判定） ·
+> **[docs/ITERM_MULTI_TAB.md](docs/ITERM_MULTI_TAB.md)**（多 tab 路由指南）。手机发 `/tabs` 可让 Bot 列出当前所有标签页。
+
+## 目录结构
+
+```
+mob-remote/                  # 仓库根（原 mobile-agent）
+├── mob / mobagent           # 统一 CLI（mobagent 为兼容别名）
+├── mob-remote-skill/        # 伞形 Agent Skill
+├── tg-notify/               # Telegram 出站通知 (pip)
+├── tg-notify-skill/
+├── droid-ctl/               # Android 真机控制 (pip)
+├── droid-ctl-skill/
+├── iphone-ctl/              # iPhone 真机控制 (pip)
+├── iphone-ctl-skill/
+├── tg-relay/                # Telegram 入站 Bot + 守护进程
+├── term-bridge/             # iTerm 注入/捕获/多 tab 路由
+├── mob-compose/             # 组合安装、check、截图流水线
+├── WebDriverAgent/          # iOS WDA（上游，不改名）
+├── game-qa-autopilot/       # 浏览器游戏 QA（可选）
+└── scripts/                 # install-skill 等横切脚本
+```
+
+文档：**[docs/README.md](docs/README.md)**（依赖 · 安装 · TG 配置）
+
+## Skill 组合（可单独安装）
+
+各 Skill **独立、可自由组合**，不必一次装全：
+
+| 组合 | 安装 | 典型场景 |
+|------|------|----------|
+| 仅 TG | `--only tg` | CI 构建通知 |
+| 仅 Android | `--only adb` | 本地 adb 自动化 |
+| 仅 iOS | `--only ios` | 本地 iPhone 自动化 |
+| TG + Android | `--only tg,adb` | 远程 Android 验收 |
+| TG + iOS | `--only tg,ios` | 远程 iPhone 验收 |
+| 双端 | `--only adb,ios` | 同 Mac 控两台设备 |
+| 全栈 | 默认 `--all` | TG 收令 + 双端 + Agent |
+
+```bash
+# 按需安装 Skill
+./mob install-skill --only tg,adb
+./mob install-skill --list
+
+# 按需安装 Python 包 + Skill
+./mob setup --only ios --with-ios-wda
+./mob setup --only tg,adb --test
+```
+
+完整组合说明见 **[docs/SKILL_COMPOSE.md](docs/SKILL_COMPOSE.md)**。
+
+## 快速开始
+
+```bash
+cd mobile-agent
+chmod +x mobagent mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-relay.py tg-relay/setup-telegram.sh
+
+# ★ Telegram 一键配置（交互式 + 测试消息）
+./mob tg-setup --test
+
+# 或完整安装（Python 包 + Skills + 设备环境）
+./mob setup --test
+./mob install-skill
+./mob check
+```
+
+详细 Token / Chat ID 说明见 **[docs/TELEGRAM_SETUP.md](docs/TELEGRAM_SETUP.md)**。
+
+## 三种使用方式
+
+### 1. Cursor Agent（推荐）
+
+安装 Skill 后，对 Agent 说：
+
+> 「mobile-agent check，然后 Android 和 iOS 都截图发 Telegram」
+
+Agent 按 `SKILL.md` 中的 vision loop 操作设备并回传结果。
+
+### 2. Telegram Bot 收令
+
+```bash
+./mob tg-start
+```
+
+| 命令 | 作用 |
+|------|------|
+| `/shot android` | Android 截图 → TG |
+| `/shot ios` | iOS 截图 → TG |
+| `/tap 540 1200` | 点击（默认 Android） |
+| `/tap 200 400 ios` | iOS 点击 |
+| `/swipe x1 y1 x2 y2` | 滑动 |
+| `/check` | 环境检查 |
+| `/devices` | 列出设备 |
+| 自然语言 | 写入 `inbox/pending.txt`，供本地 Agent 处理 |
+
+查看待办：`./mob tg-inbox`
+
+### 3. 命令行直接操作
+
+```bash
+./mob shot-android -c "验收"
+./mob ios-start
+./mob shot-ios -c "验收"
+adbkit tap 540 1200
+ioskit tap 540 1200
+```
+
+## 配置
+
+所有配置均在 **mobile-agent 包内**：
+
+| 文件 | 用途 |
+|------|------|
+| `.env` | `TELEGRAM_BOT_TOKEN`、`TELEGRAM_CHAT_ID`、设备序列号等 |
+| `mob-compose/compose.env` | iOS WDA（从 `devkit.env.example` 复制） |
+
+也可通过环境变量 `TGKIT_ENV_FILE` 指定外部 `.env` 路径。
+
+## iOS 注意
+
+首次需在 Xcode 中 Run 一次 `WebDriverAgentRunner`（选 Team、信任证书）。之后每天：
+
+```bash
+./mob ios-start
+```
+
+## 依赖
+
+- macOS（iOS 截图 / WDA / tg-notify 窗口截图）
+- Python 3.10+
+- `brew install libimobiledevice`（iOS USB）
+- `pip install python-telegram-bot`（仅 `tg-start` 需要）
+
+MIT
+
+## 其他语言
+
+- [文档索引](docs/README.md)
+- [独立 Git 仓库说明](docs/GIT.md)
+- [依赖说明（中/En/日）](docs/DEPENDENCIES.md)
+- [安装指南（中/En/日）](docs/INSTALL.md)
+- [Telegram 配置（中/En/日）](docs/TELEGRAM_SETUP.md)
+- [日本語](README.ja.md)
+- [English SKILL](SKILL.md) · [简体中文 SKILL](mob-remote-skill/SKILL.zh-CN.md) · [日本語 SKILL](mob-remote-skill/SKILL.ja.md)

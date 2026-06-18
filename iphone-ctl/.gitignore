@@ -1,0 +1,5 @@
+# ioskit
+__pycache__/
+*.egg-info/
+.pytest_cache/
+vendor/bin/*
