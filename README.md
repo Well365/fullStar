@@ -13,6 +13,11 @@
 把 Telegram 当成「AI 编程助手的遥控器」：手机发一句话 → 自动注入到 Mac 上某个正在跑
 **Claude Code / Codex** 的 iTerm2 标签页 → AI 执行 → 助手回复自动回传 Telegram。人不在电脑前也能隔空指挥多个项目的 AI 会话。
 
+![Telegram → iTerm2 Claude Code/Codex 流程图](docs/tg-iterm-flow.svg)
+
+<details>
+<summary>纯文本版流程图</summary>
+
 ```
 📱 你发 [t3] 修登录bug
         │  tg-relay 解析前缀 (iterm_route.py)
@@ -27,6 +32,8 @@
         ▼
 📱 收到 AI 回复（+ 长时间无输出时改发截图兜底）
 ```
+
+</details>
 
 **消息前缀决定发给哪个 tab**（一段对话里随意切换，无需改配置）：
 
@@ -68,7 +75,6 @@ mob-remote/                  # 仓库根（原 mobile-agent）
 ├── term-bridge/             # iTerm 注入/捕获/多 tab 路由
 ├── mob-compose/             # 组合安装、check、截图流水线
 ├── WebDriverAgent/          # iOS WDA（上游，不改名）
-├── game-qa-autopilot/       # 浏览器游戏 QA（可选）
 └── scripts/                 # install-skill 等横切脚本
 ```
 

@@ -26,7 +26,6 @@ REPLACEMENTS: list[tuple[str, str]] = [
     ("scripts/relay_iterm_routing", "tg-relay/relay_iterm_routing"),
     ("scripts/iterm-", "term-bridge/iterm-"),
     ("scripts/iterm_", "term-bridge/iterm_"),
-    ("autoqa-loop/", "game-qa-autopilot/"),
     ("devkit/", "mob-compose/"),
     ("tgkit/", "tg-notify/"),
     ("adbkit/", "droid-ctl/"),
@@ -79,9 +78,6 @@ REPLACEMENTS: list[tuple[str, str]] = [
     ('tgkit = "tgkit.cli:main"', 'tg-notify = "tg_notify.cli:main"\ntgkit = "tg_notify.cli:main"'),
     ('adbkit = "adbkit.cli:main"', 'droid-ctl = "droid_ctl.cli:main"\nadbkit = "droid_ctl.cli:main"'),
     ('ioskit = "ioskit.cli:main"', 'iphone-ctl = "iphone_ctl.cli:main"\nioskit = "iphone_ctl.cli:main"'),
-    # autoqa
-    ("autoqa-loop", "game-qa-autopilot"),
-    ("AutoQA-Loop", "Game-QA-Autopilot"),
     # ROOT paths in moved scripts
     ('ROOT / "scripts" / "iterm-', 'ROOT / "term-bridge" / "iterm-'),
     ('ROOT / "scripts" / "iterm_', 'ROOT / "term-bridge" / "iterm_'),

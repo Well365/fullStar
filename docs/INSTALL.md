@@ -138,16 +138,6 @@ WDA 辅助：
 | `stop-ios-proxy.sh` | `ios-stop` | 停止 iproxy |
 | `build-wda.sh` | `build-wda` | 编译 WDA 到真机 |
 
-#### game-qa-autopilot — `game-qa-autopilot/setup.sh`（可选，独立）
-
-```bash
-cd game-qa-autopilot
-./setup.sh
-# Node 18+, npm ci, playwright chromium, db:init, doctor
-```
-
-与手机自动化无关，单独使用。
-
 ### 常见组合速查
 
 | 场景 | 命令 |
@@ -199,7 +189,6 @@ chmod +x mobagent mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-r
 | `iphone-ctl-skill/scripts/setup-wda.sh` | clone/open WDA |
 | `mob-compose/scripts/setup-all.sh` | orchestrates above |
 | `tg-relay/setup-telegram.sh` | TG config only |
-| `game-qa-autopilot/setup.sh` | browser QA (separate) |
 
 ### devkit daily commands
 
@@ -243,6 +232,5 @@ chmod +x mobagent mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-r
 | `iphone-ctl-skill/scripts/setup-all.sh` | iphone-ctl + skill |
 | `mob-compose/scripts/setup-all.sh` | 全体オーケストレーション |
 | `tg-relay/setup-telegram.sh` | TG 設定のみ |
-| `game-qa-autopilot/setup.sh` | ブラウザ QA（独立） |
 
 詳細：[DEPENDENCIES.md](DEPENDENCIES.md) · [SKILL_COMPOSE.md](SKILL_COMPOSE.md)

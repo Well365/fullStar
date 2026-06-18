@@ -19,7 +19,6 @@
 | Android | adb (platform-tools) | `./mob setup --only adb` |
 | iOS USB | libimobiledevice | `brew install libimobiledevice` |
 | iOS 自动化 | WDA + iproxy | Xcode, `./mob ios-start` |
-| 浏览器 QA | Node ≥18, Playwright | `game-qa-autopilot/setup.sh` |
 
 ### 目录依赖
 
@@ -33,7 +32,6 @@
 | `iphone-ctl-skill/` | iphone-ctl | WDA, tg-notify 可选 | `iphone-ctl-skill/scripts/setup-all.sh` |
 | `mob-compose/` | 编排上述 | `.env`, devkit.env | `mob-compose/scripts/setup-all.sh` → `./mob setup` |
 | `WebDriverAgent/` | — | Xcode, iPhone | `iphone-ctl-skill/scripts/setup-wda.sh` |
-| `game-qa-autopilot/` | npm | Node 18+ | `game-qa-autopilot/setup.sh` |
 | `scripts/` | python-telegram-bot | — | `tg-relay/setup-telegram.sh` → `./mob tg-setup` |
 
 ### 配置与检查脚本

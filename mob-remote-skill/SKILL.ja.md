@@ -49,7 +49,6 @@ Agent ルール：タスクに関連するスキルのみ読み込む（tg / adb
 | **tgkit + tg_skill** | `tg-notify/`、`tg-notify-skill/` | Telegram 送信 |
 | **tg-relay** | `tg-relay.py` | TG コマンド受信 |
 | **WebDriverAgent** | `WebDriverAgent/` | iOS タップ/スワイプ |
-| **game-qa-autopilot** | `game-qa-autopilot/` | ブラウザゲーム QA（任意） |
 
 ## 初回セットアップ
 

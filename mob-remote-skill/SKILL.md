@@ -50,7 +50,6 @@ Sub-skill details: `tg-notify-skill/SKILL.md`, `droid-ctl-skill/SKILL.md`, `ipho
 | **tgkit + tg_skill** | `tg-notify/`, `tg-notify-skill/` | Telegram send |
 | **tg-relay** | `tg-relay.py` | Receive TG commands |
 | **WebDriverAgent** | `WebDriverAgent/` | iOS tap/swipe |
-| **game-qa-autopilot** | `game-qa-autopilot/` | Browser game QA (optional) |
 
 ## One-time setup
 

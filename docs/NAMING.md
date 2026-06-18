@@ -11,7 +11,6 @@
 | devkit | mob-compose |
 | scripts/tg-* | tg-relay/ |
 | scripts/iterm-* | term-bridge/ |
-| autoqa-loop | game-qa-autopilot |
 | mobagent | mob (+ mobagent alias) |
 | SKILL.md (root) | mob-remote-skill/ |
 

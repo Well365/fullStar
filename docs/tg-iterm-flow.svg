@@ -1,0 +1,69 @@
+<svg viewBox="0 0 840 380" width="840" height="380" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif">
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- outer card -->
+  <rect x="4" y="4" width="832" height="372" rx="18" fill="#fbfcfe" stroke="#e2e6ed"/>
+
+  <!-- Phone zone -->
+  <rect x="24" y="50" width="150" height="280" rx="14" fill="#f8f9fb" stroke="#e2e6ed"/>
+  <text x="99" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#64748b">📱 Phone · Telegram</text>
+  <rect x="40" y="96" width="118" height="64" rx="11" fill="#eff4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="99" y="122" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2563eb">You send a line</text>
+  <text x="99" y="142" text-anchor="middle" font-size="10.5" fill="#64748b">[t3] fix login bug</text>
+  <rect x="40" y="224" width="118" height="64" rx="11" fill="#effaf3" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="99" y="250" text-anchor="middle" font-size="12.5" font-weight="700" fill="#16a34a">Get AI reply</text>
+  <text x="99" y="270" text-anchor="middle" font-size="10.5" fill="#64748b">+ optional screenshot</text>
+
+  <!-- Mac zone -->
+  <rect x="210" y="30" width="412" height="320" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-dasharray="5 4"/>
+  <text x="416" y="54" text-anchor="middle" font-size="12.5" font-weight="700" fill="#475569">💻 Mac · mob-remote daemons</text>
+
+  <!-- inbound -->
+  <rect x="232" y="80" width="170" height="76" rx="11" fill="#eff4ff" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="317" y="106" text-anchor="middle" font-size="14" font-weight="700" fill="#2563eb">tg-relay</text>
+  <text x="317" y="125" text-anchor="middle" font-size="10.5" fill="#64748b">poll bot · parse prefix</text>
+  <text x="317" y="142" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">iterm_route.py</text>
+
+  <!-- inject -->
+  <rect x="232" y="178" width="170" height="64" rx="11" fill="#f5f1fe" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="317" y="204" text-anchor="middle" font-size="14" font-weight="700" fill="#7c3aed">iterm-inject</text>
+  <text x="317" y="222" text-anchor="middle" font-size="10.5" fill="#64748b">AppleScript type + Enter</text>
+
+  <!-- iterm tab -->
+  <rect x="440" y="130" width="160" height="94" rx="11" fill="#fdf6ec" stroke="#d97706" stroke-width="1.8"/>
+  <text x="520" y="156" text-anchor="middle" font-size="14" font-weight="700" fill="#d97706">iTerm2 · tab 3</text>
+  <text x="520" y="177" text-anchor="middle" font-size="11.5" fill="#1e293b" font-weight="700">Claude Code</text>
+  <text x="520" y="194" text-anchor="middle" font-size="11.5" fill="#1e293b" font-weight="700">/ Codex</text>
+  <text x="520" y="212" text-anchor="middle" font-size="10" fill="#94a3b8">AI executes</text>
+
+  <!-- monitor -->
+  <rect x="232" y="262" width="170" height="70" rx="11" fill="#fdf0f0" stroke="#dc2626" stroke-width="1.6"/>
+  <text x="317" y="288" text-anchor="middle" font-size="14" font-weight="700" fill="#dc2626">iterm-monitor</text>
+  <text x="317" y="306" text-anchor="middle" font-size="10.5" fill="#64748b">poll buffer · extract reply</text>
+  <text x="317" y="323" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">iterm_extract.py</text>
+
+  <!-- outbound -->
+  <rect x="440" y="262" width="160" height="70" rx="11" fill="#effaf3" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="520" y="291" text-anchor="middle" font-size="14" font-weight="700" fill="#16a34a">tg-notify send</text>
+  <text x="520" y="310" text-anchor="middle" font-size="10.5" fill="#64748b">push reply to private chat</text>
+
+  <!-- log buffer -->
+  <rect x="644" y="130" width="172" height="94" rx="11" fill="#f0f2f5" stroke="#cbd5e1"/>
+  <text x="730" y="161" text-anchor="middle" font-size="12.5" font-weight="700" fill="#475569">Local log buffer</text>
+  <text x="730" y="181" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">inbox/iterm-</text>
+  <text x="730" y="195" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">session-*.log</text>
+  <text x="730" y="213" text-anchor="middle" font-size="10" fill="#94a3b8">avoids truncation</text>
+
+  <!-- arrows -->
+  <line x1="158" y1="128" x2="230" y2="115" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+  <line x1="317" y1="156" x2="317" y2="176" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+  <line x1="402" y1="202" x2="438" y2="188" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+  <line x1="600" y1="180" x2="642" y2="180" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+  <path d="M520,224 C520,248 392,244 404,286" fill="none" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+  <line x1="402" y1="297" x2="438" y2="297" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+  <path d="M440,310 C300,342 184,332 158,258" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#ah)" opacity="0.65"/>
+</svg>

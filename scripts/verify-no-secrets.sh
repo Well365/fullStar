@@ -13,9 +13,6 @@ echo "== verify-no-secrets =="
 FORBIDDEN_PATHS=(
   .env
   mob-compose/compose.env
-  game-qa-autopilot/.env
-  game-qa-autopilot/autoqa.config.local.ts
-  game-qa-autopilot/storage-state.json
 )
 
 if git rev-parse --git-dir >/dev/null 2>&1; then

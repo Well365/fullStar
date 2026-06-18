@@ -49,7 +49,6 @@ Agent 规则：仅加载与任务相关的 Skill（tg / adb / ios）。
 | **tgkit + tg_skill** | `tg-notify/`、`tg-notify-skill/` | Telegram 发送 |
 | **tg-relay** | `tg-relay.py` | 接收 TG 指令 |
 | **WebDriverAgent** | `WebDriverAgent/` | iOS 点击/滑动 |
-| **game-qa-autopilot** | `game-qa-autopilot/` | 浏览器游戏 QA（可选） |
 
 ## 一次性配置
 

@@ -19,7 +19,6 @@ mobile-agent/
 ├── tg-notify/ + tg-notify-skill/
 ├── mob-compose/             # ワンコマンド setup / check / スクリーンショット送信
 ├── WebDriverAgent/     # iOS WDA
-├── game-qa-autopilot/        # ブラウザゲーム QA（任意）
 └── scripts/
     ├── setup-telegram.sh # ★ Telegram ワンクリック設定
     ├── install-skill.sh

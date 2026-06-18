@@ -7,8 +7,6 @@
 devkit/devkit.env
 **/devkit.env
 !**/devkit.env.example
-autoqa-loop/autoqa.config.local.ts
-autoqa-loop/storage-state.json
 **/config.local.*
 **/secrets.*
 **/credentials.*
@@ -31,18 +29,11 @@ devkit/.ios-proxy.log
 venv/
 ioskit/.venv-pymd/
 
-# Node (autoqa-loop, WebDriverAgent dev)
+# Node (WebDriverAgent dev)
 **/node_modules/
 **/.npm/
 **/dist/
 **/build/
-
-# autoqa-loop runtime artifacts
-autoqa-loop/artifacts/
-autoqa-loop/data/*.db
-autoqa-loop/data/*.db-*
-autoqa-loop/tickets/*.md
-autoqa-loop/.env
 
 # adbkit user cache (vendor/platform-tools IS committed for offline use)
 .adbkit/
