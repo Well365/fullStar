@@ -1,8 +1,9 @@
 """Select the active terminal backend (iTerm vs system Terminal.app) + its scripts.
 
-`TG_TERM_BACKEND=iterm|terminal` chooses the backend; default `iterm` keeps the
-existing behavior. Invalid values fall back to `iterm` with a warning. Each
-backend has a parallel set of capture/inject/screenshot scripts in this dir.
+`TG_TERM_BACKEND=iterm|terminal` chooses the backend; default `terminal` uses
+macOS's built-in Terminal.app. Invalid values fall back to `terminal` with a
+warning. Each backend has a parallel set of capture/inject/screenshot scripts
+in this dir.
 """
 from __future__ import annotations
 
@@ -28,17 +29,17 @@ _SCRIPTS = {
 
 
 def resolve_backend() -> str:
-    """Return 'iterm' or 'terminal' from TG_TERM_BACKEND (default 'iterm')."""
+    """Return 'iterm' or 'terminal' from TG_TERM_BACKEND (default 'terminal')."""
     raw = os.environ.get("TG_TERM_BACKEND", "").strip().lower()
     if not raw:
-        return "iterm"
+        return "terminal"
     if raw not in _VALID:
         print(
-            f"term_backend: unknown TG_TERM_BACKEND={raw!r}, falling back to 'iterm'",
+            f"term_backend: unknown TG_TERM_BACKEND={raw!r}, falling back to 'terminal'",
             file=sys.stderr,
             flush=True,
         )
-        return "iterm"
+        return "terminal"
     return raw
 
 

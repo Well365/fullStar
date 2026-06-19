@@ -15,8 +15,8 @@ def _clear_env(monkeypatch):
 
 # ── resolve_backend ──
 
-def test_default_is_iterm():
-    assert term_backend.resolve_backend() == "iterm"
+def test_default_is_terminal():
+    assert term_backend.resolve_backend() == "terminal"
 
 
 def test_terminal_selected(monkeypatch):
@@ -34,15 +34,15 @@ def test_whitespace_trimmed(monkeypatch):
     assert term_backend.resolve_backend() == "iterm"
 
 
-def test_invalid_falls_back_to_iterm(monkeypatch, capsys):
+def test_invalid_falls_back_to_terminal(monkeypatch, capsys):
     monkeypatch.setenv("TG_TERM_BACKEND", "kitty")
-    assert term_backend.resolve_backend() == "iterm"
+    assert term_backend.resolve_backend() == "terminal"
     assert "kitty" in (capsys.readouterr().err or "")
 
 
-def test_empty_falls_back_to_iterm(monkeypatch):
+def test_empty_falls_back_to_terminal(monkeypatch):
     monkeypatch.setenv("TG_TERM_BACKEND", "")
-    assert term_backend.resolve_backend() == "iterm"
+    assert term_backend.resolve_backend() == "terminal"
 
 
 # ── script resolvers ──
