@@ -39,3 +39,5 @@ def test_applescript_opens_tab_and_returns_tabcount():
     assert "bash '/tmp/spawn-x.sh'" in script
     assert 'keystroke "t" using command down' in script
     assert "count of tabs of front window" in script
+    assert 'do script "' in script  # new-window path present
+    assert 'in front window' in script  # existing-window path present

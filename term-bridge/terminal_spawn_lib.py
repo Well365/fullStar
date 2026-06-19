@@ -3,8 +3,8 @@
 `build_spawn_command` composes one chained shell line (mkdir -> cd ->
 install-if-missing -> launch-with-prompt). `build_spawn_applescript` returns
 the AppleScript that opens a new tab (or window if none) and runs that line via
-a temp bash script, returning the new tab index for retargeting. No side
-effects — all timestamp/file/IO work lives in the terminal-spawn.py CLI.
+a temp bash script, returning the new tab index for retargeting. No Python-side
+I/O — timestamp/file/subprocess work lives in the terminal-spawn.py CLI.
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def build_spawn_command(*, dirname: str, agent: AgentSpec, prompt: str) -> str:
 
 def build_spawn_applescript(*, script_path: str) -> str:
     """AppleScript: focus Terminal, new tab (or window), run the script, return tab index."""
-    runner = f"bash '{script_path}' ; rm -f '{script_path}'"
+    runner = f"bash {shell_quote(script_path)} ; rm -f {shell_quote(script_path)}"
     return (
         "on run\n"
         '    tell application "Terminal"\n'
