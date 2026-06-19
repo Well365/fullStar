@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -14,6 +15,7 @@ import term_backend
 from iterm_route import format_tabs_message, parse_routed_message
 from iterm_target import apply_target_env, resolve_target
 from tg_format_config import VALID as _FORMATS, get_format, set_format
+from tg_new_command import SpawnResult, retarget_env
 
 
 def _inject_iterm(text: str, target=None) -> tuple[int, str]:
@@ -73,6 +75,33 @@ def _schedule_iterm_monitor_poll(target=None) -> None:
     )
 
 
+def _parse_spawn_output(code: int, stdout: str, stderr: str) -> SpawnResult:
+    tab = None
+    workdir = ""
+    m = re.search(r"^tab=(\d+)$", stdout or "", re.M)
+    if m:
+        tab = int(m.group(1))
+    d = re.search(r"^dir=(.+)$", stdout or "", re.M)
+    if d:
+        workdir = d.group(1).strip()
+    raw = ((stdout or "") + (stderr or "")).strip()
+    return SpawnResult(code=code, tab=tab, workdir=workdir, raw=raw)
+
+
+def _spawn_session(agent_key: str, prompt: str) -> SpawnResult:
+    cmd = [sys.executable, str(ROOT / "term-bridge" / "terminal-spawn.py"), "--agent", agent_key]
+    if prompt:
+        cmd.extend(["--prompt", prompt])
+    try:
+        r = subprocess.run(
+            cmd, cwd=ROOT, capture_output=True, text=True, timeout=60,
+            stdin=subprocess.DEVNULL,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        return _parse_spawn_output(1, "", str(e))
+    return _parse_spawn_output(r.returncode, r.stdout or "", r.stderr or "")
+
+
 def apply(mod: ModuleType) -> None:
     def handle_natural_language(chat_id: int, text: str) -> str:
         target, body, hit = parse_routed_message(text)
@@ -111,6 +140,7 @@ def apply(mod: ModuleType) -> None:
                 "/swipe X1 Y1 X2 Y2 [android|ios]\n"
                 "/devices — list devices\n"
                 "/tabs — list iTerm tabs + routing hints\n"
+                "/new claude|codex [prompt] — 新 tab 启动 agent 会话\n"
                 "/format html|markdown|plain|screenshot — 回传格式\n\n"
                 "Natural language -> iTerm + inbox\n"
                 "  Prefix examples:\n"
@@ -136,6 +166,13 @@ def apply(mod: ModuleType) -> None:
             if norm is None:
                 return f"未知格式: {value}\n可选: {' | '.join(_FORMATS)}"
             return f"✓ 回传格式已设为 {norm}（立即生效，无需重启）"
+        if cmd == "/new":
+            from tg_new_command import handle_new
+            reply, new_tab = handle_new(
+                parts[1:], is_macos=(sys.platform == "darwin"), spawn=_spawn_session
+            )
+            os.environ.update(retarget_env(new_tab))
+            return reply
         return orig_cmd(text)
 
     mod._handle_natural_language = handle_natural_language
