@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
-"""Capture iTerm2 first window and send to Telegram via tg_notify."""
+"""Capture the target iTerm2 window (no activate) and send to Telegram.
+
+Uses `screencapture -l <window-id>` so iTerm is never pulled to the front and
+no System Events automation is needed — see iterm_shot for the rationale.
+"""
 from __future__ import annotations
 
 import argparse
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "term-bridge"))
+from iterm_shot import capture_window_png  # noqa: E402
+from iterm_target import resolve_target  # noqa: E402
 
 
 def _load_env() -> None:
@@ -33,6 +41,23 @@ def _chat_id() -> str | None:
     return raw or None
 
 
+def _no_shadow() -> bool:
+    raw = os.environ.get("TG_ITERM_SCREENSHOT_NO_SHADOW", "1").strip().lower()
+    return raw not in ("", "0", "false", "no", "off")
+
+
+def _send_photo(path: Path, chat: str, caption: str, env: dict) -> tuple[int, str]:
+    cmd = [
+        "tg-notify", "send",
+        "--photo", str(path),
+        "--chat-id", chat,
+        "--caption", caption,
+    ]
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=120, env=env)
+    out = ((r.stdout or "") + (r.stderr or "")).strip()
+    return r.returncode, out
+
+
 def capture_and_send(*, caption: str | None = None) -> tuple[int, str]:
     if sys.platform != "darwin":
         return 1, "iTerm screenshot requires macOS"
@@ -42,38 +67,29 @@ def capture_and_send(*, caption: str | None = None) -> tuple[int, str]:
     if not chat:
         return 1, "TELEGRAM_CHAT_ID not set"
 
-    # iTerm2's launch/scripting name is "iTerm" but its System Events *process*
-    # name is "iTerm2" — window lookup needs the process name.
-    app = os.environ.get("TG_ITERM_SCREENSHOT_APP", "iTerm").strip() or "iTerm"
-    proc = os.environ.get("TG_ITERM_SCREENSHOT_PROCESS", "iTerm2").strip() or "iTerm2"
-    wait = os.environ.get("TG_ITERM_SCREENSHOT_WAIT", "0.3").strip() or "0.3"
     cap = caption or os.environ.get("TG_ITERM_SCREENSHOT_CAPTION", "iTerm").strip() or "iTerm"
+    target = resolve_target()
 
     env = {**os.environ}
     if os.environ.get("TELEGRAM_BOT_TOKEN"):
         env["TELEGRAM_BOT_TOKEN"] = os.environ["TELEGRAM_BOT_TOKEN"]
 
-    cmd = [
-        "tg-notify",
-        "screenshot",
-        "--app",
-        app,
-        "--process",
-        proc,
-        "--wait",
-        wait,
-        "--window-index",
-        "1",
-        "--chat-id",
-        chat,
-        "--caption",
-        cap,
-    ]
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=120, env=env)
-    out = ((r.stdout or "") + (r.stderr or "")).strip()
-    if r.returncode == 0:
-        return 0, out or "screenshot sent"
-    return r.returncode, out or "screenshot failed"
+    handle = tempfile.NamedTemporaryFile(suffix=".png", prefix="iterm-shot-", delete=False)
+    handle.close()
+    path = Path(handle.name)
+    try:
+        capture_window_png(target.window, path, no_shadow=_no_shadow())
+        code, out = _send_photo(path, chat, cap, env)
+        if code == 0:
+            return 0, out or "screenshot sent"
+        return code, out or "screenshot send failed"
+    except (RuntimeError, subprocess.TimeoutExpired) as exc:
+        return 1, str(exc)
+    finally:
+        try:
+            path.unlink()
+        except OSError:
+            pass
 
 
 def main() -> int:
