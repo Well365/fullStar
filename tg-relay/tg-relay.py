@@ -252,6 +252,8 @@ def main() -> int:
         await q.edit_message_text(reply[:4000])
 
     async def start_cmd(update: Update, context) -> None:
+        if not update.message:
+            return
         await update.message.reply_text(_handle_command("/help"))
 
     async def post_init(app) -> None:
