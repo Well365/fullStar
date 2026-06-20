@@ -12,7 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "term-bridge"))
 from chat_allowlist import is_allowed, resolve_allowlist  # noqa: E402
-from tg_menu import MENU_COMMANDS, dispatch_callback, menu_for_command  # noqa: E402
+from tg_menu import MENU_COMMANDS, dispatch_callback, menu_for_command, tab_submenu  # noqa: E402
+from iterm_route import list_tabs  # noqa: E402
 
 INBOX_DIR = ROOT / "inbox"
 INBOX_FILE = INBOX_DIR / "pending.txt"
@@ -265,6 +266,15 @@ def main() -> int:
         text = update.message.text.strip()
         chat_id = chat_id or 0
         if text.startswith("/"):
+            base = text.strip().split()[0].lower().split("@")[0]
+            if base == "/tab" and len(text.strip().split()) == 1:
+                code, tabs = list_tabs()
+                rows = tab_submenu([(t.window, t.tab, t.name) for t in tabs]) if code == 0 else []
+                if rows:
+                    await update.message.reply_text("选择默认 tab：", reply_markup=_keyboard(rows))
+                    return
+                await update.message.reply_text(_handle_command(text)[:4000])
+                return
             sub = menu_for_command(text)
             if sub:
                 await update.message.reply_text("请选择：", reply_markup=_keyboard(sub))
