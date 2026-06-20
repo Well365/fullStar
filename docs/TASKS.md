@@ -45,10 +45,12 @@
 
 > ⚠️ 预存测试隔离缺陷（非本 task）：`tg-notify/tests/test_config.py` 2 项因项目根存在 `.env`（被读到真 token）失败。属测试隔离问题，归入 T3。
 
-#### T3. 核心路径补测试
-- **问题**：`tg-relay.py`、`iterm-monitor.py`、所有注入脚本零测试。
-- **做法**：优先覆盖 `_handle_command` 分发、`iterm_route` 路由、注入脚本 `--dry-run`、`iterm_extract` 提取。
-- **验收**：核心模块行覆盖 ≥ 60%。
+#### 🟡 T3. 核心路径补测试 — 部分完成
+- **已完成**：
+  - 修复 `tg-notify/tests/test_config.py` 2 个隔离失败：`load_dotenv()` 经 `find_dotenv()` 从 config.py 向上找到项目根 `.env` 回填真 token；autouse fixture 把 `_load_dotenv` 设为 noop 隔离。
+  - 核心安全/纯逻辑路径补测试（本会话累计）：`test_chat_allowlist`(fail-closed)、`test_message_guard`、`test_rate_limit`、`test_relay_patches_secret`(token 剔除)、`test_relay_singleton`(单实例)、`test_relay_commands`(命令分发 smoke)、`test_terminal_spawn_lib`/`test_screenshot`(AppleScript 转义/注入)。
+  - 现状：term-bridge 287 + tg-notify 14 = **301 passed**。
+- **未完成（backlog）**：完整行覆盖 ≥60% 需为带 I/O 的路径建 mock 基础设施（telegram bot、osascript、subprocess）+ 引入 `pytest-cov`。`iterm-monitor.py`(532 行轮询循环)、`iterm_extract.py`(提取)的端到端路径仍主要靠手测。ROI 较低，单列后续。
 
 #### ✅ T4. 单实例约束 / getUpdates 冲突 — 完成
 - **澄清**：review 称「两 bot 都 run_polling」**不准确** —— iterm-monitor 是**出站-only**（`tg-notify send`，不调 getUpdates/run_polling），relay 是唯一 updates 消费者。真实风险是**多个 relay 实例**抢同一 token（409，也是早期 tg-setup 抓不到 /start 的根因）。

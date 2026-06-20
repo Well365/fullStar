@@ -3,8 +3,17 @@ from pathlib import Path
 
 import pytest
 
+import tg_notify.core.config as cfg
 from tg_notify.core.config import resolve_chat_id, resolve_token
 from tg_notify.core.exceptions import TelegramConfigError
+
+
+@pytest.fixture(autouse=True)
+def _no_dotenv(monkeypatch):
+    # load_dotenv() finds the project-root .env via find_dotenv() (walks up from
+    # config.py, NOT cwd), refilling deleted vars with real secrets. Disable it so
+    # config tests are controlled purely by env vars / explicit args.
+    monkeypatch.setattr(cfg, "_load_dotenv", lambda: None)
 
 
 def test_resolve_token_missing(monkeypatch):
