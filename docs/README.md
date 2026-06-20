@@ -2,6 +2,7 @@
 
 | 文档 | 语言 | 内容 |
 |------|------|------|
+| [FEATURES.md](FEATURES.md) | 中文 | **新增功能清单** — /new、命令菜单、会话控制、自动兜底、白名单 |
 | [GIT.md](GIT.md) | 中文 | **独立 Git 仓库**与敏感信息排除 |
 | [INSTALL.md](INSTALL.md) | 中 / En / 日 | **一键安装脚本**总览与各模块 setup |
 | [DEPENDENCIES.md](DEPENDENCIES.md) | 中 / En / 日 | **各目录依赖**（pip / 系统 / 硬件） |

@@ -76,6 +76,27 @@ TG_ITERM_MONITOR_AFTER=45    # 注入后多久开始抓取回传
 > 完整说明：**[可视化流程说明页](docs/TG_ITERM_AI_FLOW.html)**（架构图 + 消息生命周期 + 完成判定） ·
 > **[docs/ITERM_MULTI_TAB.md](docs/ITERM_MULTI_TAB.md)**（多 tab 路由指南）。手机发 `/tabs` 可让 Bot 列出当前所有标签页。
 
+### 谁能驱动 Bot：chat-id 白名单（fail-closed）
+
+会话控制命令会直接键入到你的实时终端，因此 relay 内置 **chat-id 白名单**，只放行授权会话：
+
+```bash
+# .env
+TG_RELAY_ALLOWED_CHAT_IDS=6226809975,123456789   # 逗号/分号分隔；留空则默认仅放行机主 TELEGRAM_CHAT_ID
+# TG_RELAY_ALLOW_ALL_CHATS=1                       # 显式放行所有会话（不安全，谨慎）
+```
+
+- 白名单与 `TELEGRAM_CHAT_ID` **都为空** → relay **拒绝启动**（fail-closed），避免裸奔。
+- 非白名单会话发来的消息一律忽略，不会注入终端。
+
+### 卡住自动兜底 + 截图去重
+
+`iterm-monitor` 回传时还做了两件让手机端更省心的事：
+
+- **交互提示自动默认**：当 Claude Code / Codex 停在一个选择型提示（如 `❯ 1. Yes`）超过
+  `TG_ITERM_MONITOR_AUTO_DEFAULT` 秒（默认 60）无人选择时，自动按 Enter 选第一项并回传一条提示，避免会话整夜卡死。设 `0/off` 关闭。
+- **截图去重**：截图兜底时对比 32×32 灰度指纹，新帧与上次已发 ≥95% 相似则跳过，避免光标闪烁/重绘刷屏。
+
 ## 目录结构
 
 ```
@@ -172,6 +193,11 @@ Agent 按 `SKILL.md` 中的 vision loop 操作设备并回传结果。
 | `/new claude\|codex [prompt]` | 新标签页起一个全新 AI 会话（见上） |
 | `/tabs` | 列出当前终端标签页 + 路由提示 |
 | `/format html\|markdown\|plain\|screenshot` | 设置回传格式（即时生效，无需重启） |
+| `/stop` | 停止当前运行（向目标会话发一次 Esc） |
+| `/reset` | 重置当前会话（注入 `/clear`） |
+| `/compact` | 压缩会话上下文（注入 `/compact`） |
+| `/model opus\|sonnet\|haiku\|fable` | 查看/切换 AI 模型 |
+| `/think low\|medium\|high\|xhigh\|max\|auto` | 设置思考强度（等价 `/effort`） |
 | `/shot android` | Android 截图 → TG |
 | `/shot ios` | iOS 截图 → TG |
 | `/tap 540 1200` | 点击（默认 Android） |
@@ -179,7 +205,11 @@ Agent 按 `SKILL.md` 中的 vision loop 操作设备并回传结果。
 | `/swipe x1 y1 x2 y2` | 滑动 |
 | `/check` | 环境检查 |
 | `/devices` | 列出设备 |
+| `/help` | 显示可用命令 |
 | 自然语言 | 注入当前目标标签页（或写入 `inbox/pending.txt`） |
+
+> **命令菜单 + 子菜单**：Bot 启动时通过 `setMyCommands` 注册上述命令，输入框左侧出现「/」菜单可点选；
+> 带候选项的命令（`/new` `/format` `/shot` `/model` `/think`）发裸命令会弹出 **inline 按钮子菜单**，点一下即执行，手机上无需手打参数。`/stop /reset /compact /model /think` 等会话控制命令直接作用于当前目标的 Claude Code / Codex 会话。
 
 查看待办：`./mob tg-inbox`
 
