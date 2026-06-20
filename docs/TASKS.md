@@ -1,0 +1,108 @@
+# mob-remote — Task 文档
+
+> 来源：2026-06-20 项目 review（架构 / 缺陷 / 安全三维度）。
+> 优先级：P0 安全阻断 · P1 高 · P2 中 · P3 低。
+> 状态：✅ 已完成 · 🔲 待办。
+
+---
+
+## ✅ 已完成（本轮）
+
+| # | Task | 实现 |
+|---|------|------|
+| S1 | **fail-closed 白名单**：移除 `TG_RELAY_ALLOW_ALL_CHATS` 逃生舱，空白名单一律拒绝 | `chat_allowlist.py` `is_allowed` 返回 False；`tg-relay.py` 启动强制白名单 |
+| S2 | **注入护栏**：剥离 C0/DEL 控制字符 + 单条长度上限 | `message_guard.py`（`TG_RELAY_MAX_INJECT_CHARS=2000`） |
+| S3 | **速率限制**：每 chat 最小消息间隔 | `rate_limit.py`（`TG_RELAY_MIN_INTERVAL_SECS=1`） |
+| I1 | iterm-monitor 崩溃自愈（看护循环 + 防爆） | `tg-stack-daemon.sh` |
+| I2 | `oneClickStart.sh --watch` 代码/配置热重载 | `oneClickStart.sh` |
+| I3 | `/new` 启动命令可配置（`AGENT_<KEY>_LAUNCH`） | `agent_cli.py` |
+| I4 | slash 命令可靠提交（Ctrl-U 清行 + 双回车 + `/model` 自动确认） | `terminal_inject_lib.py` / `iterm-inject.py` / `tg_relay_patches.py` |
+| I5 | `/shot` 增加 mac 屏幕 / 终端截图 | `mac-screenshot.py` / `tg_menu.py` |
+| I6 | 三语 README 切换（中/英/日） | `README*.md` |
+
+---
+
+## 🔲 待办
+
+### P1 — 高优先
+
+#### T1. token 不暴露于进程 argv / 子进程环境
+- **问题**：`tg-stack-daemon.sh` 用 `set -a; source .env` 把 `TELEGRAM_BOT_TOKEN` 导入所有子进程；`tg_relay_patches.py` 用 `repr(env)` 把 token 拼进 `python -c` 字符串 → `ps -eww` 可见。
+- **位置**：`tg-stack-daemon.sh:40`、`tg_relay_patches.py:89,134`
+- **做法**：调度子进程改为「写 tempfile 传 env / 只传必要键」；source 后 `unset` 敏感变量。
+- **验收**：`ps -eww` 中任何子进程都看不到 token。
+
+#### T2. AppleScript 全面改 env 传参，消除 f-string 注入面
+- **问题**：`screenshot.py`、`terminal_spawn_lib.py` 把 `process_name`/`runner` 直接 f-string 拼进 AppleScript，含 `"` 会越界。
+- **位置**：`tg-notify/.../screenshot.py:211,262`、`terminal_spawn_lib.py:31,51`
+- **做法**：像 `iterm-inject.py` 那样用 `system attribute` 读环境变量；或白名单校验 `[A-Za-z0-9 ._-]`。
+- **验收**：含特殊字符的输入不能改变 AppleScript 结构（加测试）。
+
+#### T3. 核心路径补测试
+- **问题**：`tg-relay.py`、`iterm-monitor.py`、所有注入脚本零测试。
+- **做法**：优先覆盖 `_handle_command` 分发、`iterm_route` 路由、注入脚本 `--dry-run`、`iterm_extract` 提取。
+- **验收**：核心模块行覆盖 ≥ 60%。
+
+#### T4. 两 bot 抢同一 token —— 明确单实例约束
+- **问题**：relay 与 iterm-monitor 都 `run_polling`，Telegram 每条消息只投一个消费者，无互斥。
+- **位置**：`tg-relay.py`、`iterm-monitor.py:60`
+- **做法**：monitor 不再 `run_polling`（仅出站发送);或文档化「relay 收、monitor 只发」并加 PID 互斥检查。
+- **验收**：两者同跑时不丢消息;启动有冲突检测。
+
+### P2 — 中优先
+
+#### T5. 抽公共 `env_util.load_env()`
+- **问题**：`_load_env()` 在 9 个文件重复。
+- **做法**：抽到 `term-bridge/env_util.py`，各处引用。
+- **验收**：重复实现归一，全测试通过。
+
+#### T6. AppleScript 注入抗竞态
+- **问题**：硬编码 `delay 0.05`×40 抢焦点，繁忙时粘贴可能落错窗口；剪贴板异常路径会丢失。
+- **做法**：超时可配 + 退避；剪贴板恢复用 `try/finally` 等价结构兜底。
+- **验收**：高负载下注入成功率提升；剪贴板必恢复。
+
+#### T7. 命名统一 + backend-aware 文案
+- **问题**：`mobile-agent` / `mob-remote` 混用；`iterm` 字样在 backend=terminal 时仍出现。
+- **做法**：统一品牌名;所有用户可见文案按 `resolve_backend()` 显示。
+- **验收**：grep 无残留错配名称。
+
+#### T8. 状态文件原子写
+- **问题**：`screenshot_dedup.py` 直接 `write_text` 非原子（崩溃→损坏）。
+- **位置**：`screenshot_dedup.py:56`
+- **做法**：统一 `tmp + os.replace`（参考 `reply_dedup.py`）。
+
+#### T9. `curl|bash` 安装加固
+- **位置**：`agent_cli.py:25`
+- **做法**：`curl --proto '=https' --tlsv1.2`；或改 npm 钉版本;装前先探测二进制。
+
+### P3 — 低优先 / 体验
+
+| # | Task |
+|---|------|
+| T10 | 结构化日志（`logging` 取代 `print`，分级 + 文件轮转） |
+| T11 | `inbox/pending.txt` 自动轮转/截断（防无限增长）；`inbox/` 目录权限 0700 |
+| T12 | `iterm-monitor.py`（532 行）/ `iterm_extract.py`（447 行）拆分模块 |
+| T13 | 启动校验 `TELEGRAM_CHAT_ID` 为正整数，非法即报错 |
+| T14 | `verify-no-secrets.sh` 装成 git pre-commit hook，并扫工作树 |
+
+---
+
+## 🆕 候选新功能（按价值排序）
+
+| # | 功能 | 说明 |
+|---|------|------|
+| F1 | `/unlock` 远程解锁 Android | 数字 PIN：唤醒→上滑→输 PIN→回车（PIN 存 .env） |
+| F2 | 审计日志 + `/last` | 回看最近注入/回复，安全可追溯 |
+| F3 | 高危命令二次确认 | 注入含 `rm -rf` 等模式时要求确认 |
+| F4 | 多 Mac / 多设备编排 | 一个 bot 管多机，`/host` 切换 |
+| F5 | 会话快照 `/save` `/resume` | 存档/恢复某 tab 的 AI 上下文 |
+| F6 | iOS 截图免折腾 | 封装 WDA 自动拉起，绕过 iOS 17 隧道坑 |
+| F7 | Web 仪表盘 | 浏览器看所有 tab 状态 + 一键注入 |
+| F8 | 主动通知（CI/任务完成）带按钮 | 「查看 / 重试」inline 按钮 |
+
+---
+
+## 建议下一步
+
+按性价比：**T1 → T2 → T4 → T3**（安全收尾 + 可靠性），其余排入常规迭代。
+新功能优先 **F1（/unlock）** 与 **F2（审计日志）**。
