@@ -43,17 +43,24 @@ def similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a, b).ratio()
 
 
-def is_duplicate(
-    candidate: str, buffer: list[str], threshold: float = DEFAULT_THRESHOLD
-) -> bool:
-    """True when `candidate` is >= `threshold` similar to any buffered message.
+def is_duplicate(candidate: str, buffer: list[str]) -> bool:
+    """True only when `candidate` adds NO new line beyond what was already sent.
+
+    Suppress a candidate whose every normalized non-blank line already appears in
+    some buffered message (a verbatim or fully-contained re-send). A genuinely new
+    result always carries at least one new line, so it is never dropped — coding
+    output shares a lot of boilerplate, and the earlier whole-message similarity
+    gate (>=95%) swallowed real results that differed only in a conclusion line.
 
     `candidate` is normalized here; buffer entries are stored already-normalized.
     """
-    norm = normalize(candidate)
-    if not norm:
+    cand_lines = [l for l in normalize(candidate).splitlines() if l]
+    if not cand_lines:
         return False
-    return any(similarity(norm, prev) >= threshold for prev in buffer)
+    seen: set[str] = set()
+    for prev in buffer:
+        seen.update(l for l in prev.splitlines() if l)
+    return all(line in seen for line in cand_lines)
 
 
 def read_buffer(path: Path) -> list[str]:

@@ -32,11 +32,27 @@ def test_similarity_disjoint_is_low():
     assert similarity("alpha beta gamma", "totally other text here") < 0.5
 
 
-def test_is_duplicate_true_for_near_identical():
+def test_is_duplicate_true_for_exact_repeat():
     buf = [normalize("源1: Caixin\n源2: OCCRP\n源3: Taipei\n源4: 共同社")]
-    # same info, one trailing word differs -> well above 95%
-    candidate = "源1: Caixin\n源2: OCCRP\n源3: Taipei\n源4: 共同社!"
+    candidate = "源1: Caixin\n源2: OCCRP\n源3: Taipei\n源4: 共同社"
     assert is_duplicate(candidate, buf) is True
+
+
+def test_is_duplicate_true_for_contained_subset():
+    # Every line of the candidate already appeared in a buffered send → no new info.
+    buf = [normalize("intro\n源1: Caixin\n源2: OCCRP\n源3: Taipei")]
+    candidate = "源1: Caixin\n源2: OCCRP"
+    assert is_duplicate(candidate, buf) is True
+
+
+def test_is_duplicate_false_when_only_conclusion_differs():
+    # REGRESSION (results were swallowed): two results sharing a large identical
+    # body but a DIFFERENT conclusion line. Whole-message 95% similarity dropped
+    # the 2nd; line-novelty must send it because it carries a new line.
+    body = "\n".join(f"line {i}" for i in range(40))
+    buf = [normalize(body + "\n结论：测试失败")]
+    candidate = body + "\n结论：测试通过，已修复"
+    assert is_duplicate(candidate, buf) is False
 
 
 def test_is_duplicate_false_for_novel_message():
