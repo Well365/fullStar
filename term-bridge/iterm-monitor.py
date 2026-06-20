@@ -22,6 +22,7 @@ from iterm_extract import (  # noqa: E402
 )
 from interactive_prompt import detect_select_prompt, should_auto_default  # noqa: E402
 from iterm_target import resolve_target  # noqa: E402
+from reply_dedup import append_buffer, is_duplicate, read_buffer  # noqa: E402
 from target_default import current_target  # noqa: E402
 from tg_format import format_reply, strip_terminal_noise  # noqa: E402
 from tg_format_config import get_format  # noqa: E402
@@ -314,6 +315,13 @@ def _maybe_send_reply(capture: str, *, force: bool = False) -> tuple[int, str]:
     if not to_send.strip():
         return 0, "already sent"
 
+    # Rolling similarity gate: skip a candidate that repeats any of the last
+    # BUFFER_CAP sent messages (catches non-consecutive / re-emitted duplicates
+    # that new_content_since — which only compares the previous send — misses).
+    buf_path = _monitor_file("sent-buffer")
+    if is_duplicate(to_send, read_buffer(buf_path)):
+        return 0, "already sent (similar)"
+
     fmt = _output_format()
     if fmt == "screenshot":
         # New reply detected → send an iTerm screenshot instead of text.
@@ -329,6 +337,7 @@ def _maybe_send_reply(capture: str, *, force: bool = False) -> tuple[int, str]:
     if code == 0:
         _write_last_sent(reply)
         _write_last_sent_at(time.time())
+        append_buffer(buf_path, to_send)
     return code, msg or "sent"
 
 
@@ -494,7 +503,7 @@ def main() -> int:
 
     if args.reset:
         from iterm_log_buffer import reset as reset_log_buffer
-        for kind in ("state", "last-sent", "last-sent-at", "screenshot-mark", "auto-default-mark", "shot-fp"):
+        for kind in ("state", "last-sent", "last-sent-at", "screenshot-mark", "auto-default-mark", "shot-fp", "sent-buffer"):
             p = _monitor_file(kind)
             if p.is_file():
                 p.unlink()
