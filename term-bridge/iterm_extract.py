@@ -165,17 +165,34 @@ def _norm_line(line: str) -> str:
     return re.sub(r"\s+", " ", line.strip())
 
 
+def _find_last_block(cur: list[str], block: list[str]) -> int | None:
+    """Index of the last contiguous occurrence of `block` in `cur`, or None."""
+    if not block or len(block) > len(cur):
+        return None
+    for start in range(len(cur) - len(block), -1, -1):
+        if cur[start : start + len(block)] == block:
+            return start
+    return None
+
+
 def new_content_since(reply: str, last_sent: str) -> str:
     """Return only the part of `reply` not already covered by `last_sent`.
 
-    Guards against duplicate Telegram messages where a later capture repeats an
-    earlier (partial) send as its leading block — e.g. a mid-stream send followed
-    by the completed turn, or a verbatim re-send. Comparison is line-based on
-    normalized non-blank lines, so whitespace/wrapping differences don't matter.
+    Guards against duplicate Telegram messages where a later capture repeats
+    already-sent content. The streaming extraction window shifts between sends
+    (an intermediate "Crunched" marker resets the start point, the terminal
+    reflows, or earlier lines scroll out of the bounded tail), so the repeated
+    block is not always a strict leading prefix — it may sit behind a preamble
+    line, or appear as a suffix of `last_sent` aligned with the head of `reply`.
 
-    Only strips when `last_sent` is fully a leading block of `reply` (the precise
-    "repeats the previous message" case); an otherwise-different reply is returned
-    unchanged. Returns "" when `reply` adds nothing beyond `last_sent`.
+    The overlap is found by matching the longest suffix of `last_sent` against a
+    contiguous run in `reply` (last occurrence wins), then dropping everything up
+    to and including that run. To avoid over-stripping on a coincidental
+    single-line match, a partial overlap must be at least two lines unless it
+    covers all of `last_sent`. Comparison is line-based on normalized non-blank
+    lines, so whitespace/wrapping differences don't matter. Returns "" when
+    `reply` adds nothing beyond `last_sent`, and the full `reply` when there is
+    no qualifying overlap (a genuinely different turn).
     """
     if not last_sent.strip() or not reply.strip():
         return reply
@@ -185,21 +202,28 @@ def new_content_since(reply: str, last_sent: str) -> str:
         return reply
 
     cur_raw = reply.splitlines()
-    cur_norm = [_norm_line(l) for l in cur_raw if l.strip()]
-    n = len(prev)
-    if len(cur_norm) < n or cur_norm[:n] != prev:
-        return reply  # not a continuation of the previous send → keep full reply
+    nonblank_idx = [i for i, l in enumerate(cur_raw) if l.strip()]
+    cur_norm = [cur_raw[i].strip() and _norm_line(cur_raw[i]) for i in nonblank_idx]
 
-    # Drop the first n non-blank lines (the repeated block) from the original text.
-    seen = 0
-    idx = 0
-    while idx < len(cur_raw) and seen < n:
-        if cur_raw[idx].strip():
-            seen += 1
-        idx += 1
-    tail = cur_raw[idx:]
-    while tail and not tail[0].strip():
-        tail.pop(0)
+    # Longest suffix of prev that appears contiguously in cur; require >=2 lines
+    # unless the whole of last_sent matched (k == len(prev)).
+    end_nonblank: int | None = None
+    for k in range(len(prev), 0, -1):
+        if k < 2 and k != len(prev):
+            break
+        start = _find_last_block(cur_norm, prev[-k:])
+        if start is not None:
+            end_nonblank = start + k
+            break
+
+    if end_nonblank is None:
+        return reply  # no qualifying overlap → keep full reply
+
+    if end_nonblank >= len(nonblank_idx):
+        return ""  # reply adds nothing beyond what was already sent
+
+    raw_start = nonblank_idx[end_nonblank]
+    tail = cur_raw[raw_start:]
     while tail and not tail[-1].strip():
         tail.pop()
     return "\n".join(tail).strip()
