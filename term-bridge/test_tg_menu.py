@@ -53,3 +53,27 @@ def test_dispatch_callback_calls_handler():
 
 def test_dispatch_callback_unknown():
     assert "未知操作" in m.dispatch_callback("bogus:x", lambda c: "ok")
+
+
+def test_menu_includes_tab():
+    from tg_menu import MENU_COMMANDS
+    assert ("tab", "选择转发目标 tab") in MENU_COMMANDS
+
+
+def test_tab_submenu_builds_buttons():
+    from tg_menu import tab_submenu
+    rows = tab_submenu([(1, 1, "..rees/fullStar"), (1, 3, "myapp")])
+    assert rows == [
+        ("w1/t1 · ..rees/fullStar", "tab:1:1"),
+        ("w1/t3 · myapp", "tab:1:3"),
+    ]
+
+
+def test_tab_submenu_empty_when_no_tabs():
+    from tg_menu import tab_submenu
+    assert tab_submenu([]) == []
+
+
+def test_callback_to_command_tab():
+    from tg_menu import callback_to_command
+    assert callback_to_command("tab", "1:3") == "/tab 1:3"

@@ -11,6 +11,7 @@ from typing import Callable
 MENU_COMMANDS: list[tuple[str, str]] = [
     ("new", "新 tab 启动 agent 会话"),
     ("tabs", "列出终端标签"),
+    ("tab", "选择转发目标 tab"),
     ("shot", "截图当前屏幕"),
     ("format", "设置回传格式"),
     ("devices", "列出设备"),
@@ -55,6 +56,7 @@ _ACTION_TO_CMD: dict[str, str] = {
     "shot": "/shot",
     "model": "/model",
     "think": "/think",
+    "tab": "/tab",
 }
 
 
@@ -65,6 +67,15 @@ def menu_for_command(text: str) -> list[tuple[str, str]] | None:
         return None
     cmd = parts[0].lower().split("@")[0]
     return SUBMENUS.get(cmd)
+
+
+def tab_submenu(tabs: list[tuple[int, int, str]]) -> list[tuple[str, str]]:
+    """Inline buttons for /tab from live tabs: (window, tab, name) → (label, callback)."""
+    rows: list[tuple[str, str]] = []
+    for window, tab, name in tabs:
+        short = name.replace("\n", " ")[:20]
+        rows.append((f"w{window}/t{tab} · {short}", f"tab:{window}:{tab}"))
+    return rows
 
 
 def parse_callback(data: str) -> tuple[str, str]:
