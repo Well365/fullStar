@@ -43,6 +43,10 @@ load_env() {
     set +a
   fi
   export TGKIT_ENV_FILE="${TGKIT_ENV_FILE:-$ENV_FILE}"
+  # Keep the token OUT of child process environments (visible in `ps -eww`).
+  # The shell var is retained for the start-time check below; children
+  # (iterm-monitor) re-read the token from .env via their own _load_env().
+  export -n TELEGRAM_BOT_TOKEN 2>/dev/null || true
 }
 
 monitor_pids() {

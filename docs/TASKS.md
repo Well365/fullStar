@@ -26,11 +26,14 @@
 
 ### P1 — 高优先
 
-#### T1. token 不暴露于进程 argv / 子进程环境
-- **问题**：`tg-stack-daemon.sh` 用 `set -a; source .env` 把 `TELEGRAM_BOT_TOKEN` 导入所有子进程；`tg_relay_patches.py` 用 `repr(env)` 把 token 拼进 `python -c` 字符串 → `ps -eww` 可见。
-- **位置**：`tg-stack-daemon.sh:40`、`tg_relay_patches.py:89,134`
-- **做法**：调度子进程改为「写 tempfile 传 env / 只传必要键」；source 后 `unset` 敏感变量。
-- **验收**：`ps -eww` 中任何子进程都看不到 token。
+#### ✅ T1. token 不暴露于进程 argv / 子进程环境 — 完成
+- **问题**：`tg_relay_patches.py` 用 `repr(env)` 把 token 拼进 `python -c`（argv 全局可见）；`tg-stack-daemon.sh` `set -a; source` 把 token 导出给 monitor 子进程。
+- **实现**：
+  - `tg_relay_patches.py`：新增 `_sanitized_env()` 剔除 `TELEGRAM_BOT_TOKEN`；两个调度子进程不再把 env 拼进 `-c`（argv 干净），需要 token 的 monitor 从 `.env` 自读；按回车子进程不带 token。
+  - `tg-stack-daemon.sh`：`load_env` 后 `export -n TELEGRAM_BOT_TOKEN`，monitor 从 `.env` 自读。
+  - 新增 `test_relay_patches_secret.py`（4 项）。
+- **验收**：✅ relay/monitor argv 不含 token；monitor 仍正常发送（从 .env 读到 token）。
+- **已知残留**：Python `_load_env` 用 `os.environ.setdefault`（putenv），主进程运行后 `ps -eww`（仅同用户可见）仍可能显示 token —— 彻底消除需改 `_load_env` 不污染 `os.environ`，改动大、收益边际，暂留。
 
 #### T2. AppleScript 全面改 env 传参，消除 f-string 注入面
 - **问题**：`screenshot.py`、`terminal_spawn_lib.py` 把 `process_name`/`runner` 直接 f-string 拼进 AppleScript，含 `"` 会越界。

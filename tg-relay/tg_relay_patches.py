@@ -74,6 +74,17 @@ def _inject_key(key: str, target=None) -> tuple[int, str]:
     return r.returncode, ((r.stdout or "") + (r.stderr or "")).strip()
 
 
+# Secrets that must never land in a child's argv or be inherited by children
+# that don't need them. Children that DO need the token (iterm-monitor) re-read
+# it from .env via their own _load_env(), so dropping it here is safe.
+_SECRET_ENV_KEYS = ("TELEGRAM_BOT_TOKEN",)
+
+
+def _sanitized_env(env: dict[str, str]) -> dict[str, str]:
+    """Return a copy of env with secret keys removed (see _SECRET_ENV_KEYS)."""
+    return {k: v for k, v in env.items() if k not in _SECRET_ENV_KEYS}
+
+
 def _schedule_iterm_monitor_poll(target=None) -> None:
     delay = os.environ.get("TG_ITERM_MONITOR_AFTER", "").strip()
     if not delay or delay.lower() in ("0", "false", "no", "off"):
@@ -84,18 +95,19 @@ def _schedule_iterm_monitor_poll(target=None) -> None:
         secs = 30
     monitor = str(ROOT / "term-bridge" / "iterm-monitor.py")
     t = target or resolve_target()
-    env = apply_target_env(t)
+    # Drop the token from the env: it must not appear in argv (it never did via
+    # -c now) nor in this child's environment. iterm-monitor re-reads it from
+    # .env. The grandchild inherits this sanitized env (no env= passed below).
+    env = _sanitized_env(apply_target_env(t))
     env["ITERM_MONITOR_SUFFIX"] = t.log_suffix()
-    env_str = repr(env)
     subprocess.Popen(
         [
             sys.executable,
             "-c",
             (
-                "import os, time, subprocess, sys; "
-                f"env = {env_str}; "
+                "import time, subprocess, sys; "
                 f"time.sleep({secs}); "
-                f"subprocess.run([sys.executable, {monitor!r}, '--once', '--force'], env=env)"
+                f"subprocess.run([sys.executable, {monitor!r}, '--once', '--force'])"
             ),
         ],
         env=env,
@@ -120,7 +132,8 @@ def _schedule_confirm_enter(target=None, delay: float | None = None) -> None:
         except ValueError:
             delay = 1.3
     t = target or resolve_target()
-    env = apply_target_env(t)
+    # Pressing Enter needs no token; strip it and let the child inherit the env.
+    env = _sanitized_env(apply_target_env(t))
     cmd = [str(term_backend.inject_script())]
     if t.window is None:
         cmd.append("--front-window")
@@ -132,7 +145,7 @@ def _schedule_confirm_enter(target=None, delay: float | None = None) -> None:
             sys.executable, "-c",
             "import time, subprocess, sys; "
             f"time.sleep({float(delay)}); "
-            f"subprocess.run([sys.executable] + {cmd!r}, env={env!r}, stdin=subprocess.DEVNULL)",
+            f"subprocess.run([sys.executable] + {cmd!r}, stdin=subprocess.DEVNULL)",
         ],
         env=env,
         stdin=subprocess.DEVNULL,
