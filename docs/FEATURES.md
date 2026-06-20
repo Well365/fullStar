@@ -60,6 +60,13 @@
 
 - 新增系统自带 Terminal.app 的注入/捕获后端，`TG_TERM_BACKEND=terminal`（默认）/ `iterm` 切换。
 
+## 9. 持久转发目标 — `/tab`
+
+- `/tab`（无参）弹出当前所有 tab 的按钮；`/tab 3` / `/tab 1:3` 直接设；`/tab off` 清除。
+- 选中后持久化到 `inbox/target-default.json`，后续无前缀消息的**注入 + 回传 + 卡住自动按 Enter + 空闲截图**都跟随该 tab，重启不丢。
+- 路由优先级：单条前缀 `[t3]` > `/tab` 默认 > `.env` 默认。
+- 实现：`term-bridge/target_default.py`（`current_target()` 单一真源）+ `iterm_route.py` + `iterm-monitor.py`。
+
 ---
 
 > 设计与实现细节见 `docs/superpowers/specs/` 与 `docs/superpowers/plans/`（2026-06-19 各 spec / plan）。

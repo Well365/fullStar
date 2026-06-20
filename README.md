@@ -47,6 +47,9 @@
 | `[别名]` | `[fz] 看部署` | `.env` 的 `TG_ITERM_ALIASES` 精确映射 |
 | 无前缀 | `看下 git 状态` | 落到 `.env` 默认 tab |
 
+> **路由优先级**：单条消息前缀 `[t3]` > `/tab` 设的持久默认 > `.env` 的 `TG_ITERM_TAB`。
+> 用 `/tab` 选一次后，后续无前缀消息的注入与回传都跟随该 tab（含卡住自动按 Enter / 空闲截图）。
+
 **启用**（前置：已配好 Bot Token / Chat ID）：
 
 ```bash
@@ -192,6 +195,7 @@ Agent 按 `SKILL.md` 中的 vision loop 操作设备并回传结果。
 |------|------|
 | `/new claude\|codex [prompt]` | 新标签页起一个全新 AI 会话（见上） |
 | `/tabs` | 列出当前终端标签页 + 路由提示 |
+| `/tab [N]` | 选择转发目标 tab（无参弹按钮选，`/tab 3` 直接设，`/tab off` 清除）。设为持久默认,后续无前缀消息都进该 tab |
 | `/format html\|markdown\|plain\|screenshot` | 设置回传格式（即时生效，无需重启） |
 | `/stop` | 停止当前运行（向目标会话发一次 Esc） |
 | `/reset` | 重置当前会话（注入 `/clear`） |
