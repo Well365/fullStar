@@ -42,4 +42,22 @@ def test_applescript_opens_tab_and_returns_tabcount():
     assert 'do script "' in script  # new-window path present
     assert 'in front window' in script  # existing-window path present
     esc = lib.build_spawn_applescript(script_path="/tmp/it's.sh")
-    assert "bash '/tmp/it'\\''s.sh'" in esc  # path is shell-quoted, not embedded raw
+    # path is shell-quoted (backslash) THEN AppleScript-escaped (backslash doubled),
+    # so the runner can't break out of the do-script "..." literal.
+    assert lib.shell_quote("/tmp/it's.sh").replace("\\", "\\\\") in esc
+
+
+def test_as_applescript_literal_escapes_quote_and_backslash():
+    # a double-quote must be escaped so it can't terminate the do-script literal
+    assert lib._as_applescript_literal('a"b') == '"a\\"b"'
+    assert lib._as_applescript_literal("a\\b") == '"a\\\\b"'
+
+
+def test_as_applescript_literal_quote_injection_blocked():
+    # a path trying to break out + inject AppleScript stays inside the literal
+    evil = '/tmp/x" & (do shell script "rm -rf ~") & "'
+    lit = lib._as_applescript_literal(evil)
+    assert lit.startswith('"') and lit.endswith('"')
+    assert '\\"' in lit  # the embedded quote is escaped
+    # every quote inside the literal is escaped → no unescaped breakout
+    assert '"' not in lit[1:-1].replace('\\"', '')

@@ -26,9 +26,22 @@ def build_spawn_command(*, dirname: str, agent: AgentSpec, prompt: str) -> str:
     return f"mkdir -p {workdir} && cd {workdir} && {install} && {launch}"
 
 
+def _as_applescript_literal(s: str) -> str:
+    """Quote + escape a string as an AppleScript string literal, so the embedded
+    shell command can't break out of the `do script "..."` literal."""
+    esc = (
+        s.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+    )
+    return f'"{esc}"'
+
+
 def build_spawn_applescript(*, script_path: str) -> str:
     """AppleScript: focus Terminal, new tab (or window), run the script, return tab index."""
     runner = f"bash {shell_quote(script_path)} ; rm -f {shell_quote(script_path)}"
+    runner_lit = _as_applescript_literal(runner)
     return (
         "on run\n"
         '    tell application "Terminal"\n'
@@ -48,9 +61,9 @@ def build_spawn_applescript(*, script_path: str) -> str:
         "    end tell\n"
         '    tell application "Terminal"\n'
         "        if (count of windows) is 0 then\n"
-        f'            do script "{runner}"\n'
+        f"            do script {runner_lit}\n"
         "        else\n"
-        f'            do script "{runner}" in front window\n'
+        f"            do script {runner_lit} in front window\n"
         "        end if\n"
         "        set tabIdx to (count of tabs of front window)\n"
         "    end tell\n"

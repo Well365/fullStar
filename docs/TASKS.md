@@ -35,11 +35,15 @@
 - **验收**：✅ relay/monitor argv 不含 token；monitor 仍正常发送（从 .env 读到 token）。
 - **已知残留**：Python `_load_env` 用 `os.environ.setdefault`（putenv），主进程运行后 `ps -eww`（仅同用户可见）仍可能显示 token —— 彻底消除需改 `_load_env` 不污染 `os.environ`，改动大、收益边际，暂留。
 
-#### T2. AppleScript 全面改 env 传参，消除 f-string 注入面
-- **问题**：`screenshot.py`、`terminal_spawn_lib.py` 把 `process_name`/`runner` 直接 f-string 拼进 AppleScript，含 `"` 会越界。
-- **位置**：`tg-notify/.../screenshot.py:211,262`、`terminal_spawn_lib.py:31,51`
-- **做法**：像 `iterm-inject.py` 那样用 `system attribute` 读环境变量；或白名单校验 `[A-Za-z0-9 ._-]`。
-- **验收**：含特殊字符的输入不能改变 AppleScript 结构（加测试）。
+#### ✅ T2. 消除 AppleScript f-string 注入面 — 完成
+- **问题**：`screenshot.py`、`terminal_spawn_lib.py` 把 `process_name`/`runner` 直接 f-string 拼进 AppleScript，含 `"` 会越界（H-2、H-3）。
+- **实现**：各加 `_as_applescript_literal()`（转义 `\` `"` 换行并加引号），所有插值改为转义后的字面量。
+  - `screenshot.py` `_get_window_bounds`/`_get_window_id`：app/process 名转义；去掉 error 文案里的二次插值；window_index 强制 int。
+  - `terminal_spawn_lib.py` `build_spawn_applescript`：`do script` 两处用转义后的 `runner_lit`（同时修复含单引号 path 的越界）。
+- **测试**：`test_terminal_spawn_lib.py` +2、`tests/test_screenshot.py` +2（含注入越界用例）。term-bridge 280 passed。
+- **说明**：采用转义而非 env 传参 —— 对返回值型脚本与 `do script` 字面量都适用，等效消除注入面。
+
+> ⚠️ 预存测试隔离缺陷（非本 task）：`tg-notify/tests/test_config.py` 2 项因项目根存在 `.env`（被读到真 token）失败。属测试隔离问题，归入 T3。
 
 #### T3. 核心路径补测试
 - **问题**：`tg-relay.py`、`iterm-monitor.py`、所有注入脚本零测试。

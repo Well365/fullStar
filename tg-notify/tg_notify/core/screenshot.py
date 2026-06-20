@@ -207,18 +207,37 @@ def _capture_by_bounds(bounds: tuple[int, int, int, int], output_path: Path) -> 
     _run_screencapture(["screencapture", "-x", "-R", region, str(output_path)])
 
 
+def _as_applescript_literal(s: str) -> str:
+    """Quote + escape a string as an AppleScript string literal.
+
+    Prevents AppleScript injection when interpolating app/process names: a value
+    containing a double-quote would otherwise break out of the literal. Escapes
+    backslash, double-quote, and newlines (which would split the source line).
+    """
+    esc = (
+        s.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+    )
+    return f'"{esc}"'
+
+
 def _get_window_bounds(process_name: str, window_index: int, activate_name: str) -> tuple[int, int, int, int]:
+    act = _as_applescript_literal(activate_name)
+    proc = _as_applescript_literal(process_name)
+    idx = int(window_index)
     script = f"""
-tell application "{activate_name}" to activate
+tell application {act} to activate
 tell application "System Events"
-    if not (exists process "{process_name}") then
-        error "Process not running: {process_name}"
+    if not (exists process {proc}) then
+        error "Process not running"
     end if
-    tell process "{process_name}"
-        if (count of windows) < {window_index} then
-            error "Process has fewer than {window_index} windows"
+    tell process {proc}
+        if (count of windows) < {idx} then
+            error "Process has too few windows"
         end if
-        set win to window {window_index}
+        set win to window {idx}
         set p to position of win
         set s to size of win
         return (item 1 of p as text) & "," & (item 2 of p as text) & "," & (item 1 of s as text) & "," & (item 2 of s as text)
@@ -260,17 +279,20 @@ def _resolve_running_process_name(hint: str):
 
 
 def _get_window_id(process_name: str, window_index: int, activate_name: str) -> int:
+    act = _as_applescript_literal(activate_name)
+    proc = _as_applescript_literal(process_name)
+    idx = int(window_index)
     script = f'''
-tell application "{activate_name}" to activate
+tell application {act} to activate
 tell application "System Events"
-    if not (exists process "{process_name}") then
-        error "Process not running: {process_name}"
+    if not (exists process {proc}) then
+        error "Process not running"
     end if
-    tell process "{process_name}"
-        if (count of windows) < {window_index} then
-            error "Process has fewer than {window_index} windows"
+    tell process {proc}
+        if (count of windows) < {idx} then
+            error "Process has too few windows"
         end if
-        return id of window {window_index}
+        return id of window {idx}
     end tell
 end tell
 '''
