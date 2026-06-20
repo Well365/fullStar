@@ -10,17 +10,17 @@ from __future__ import annotations
 
 from terminal_tabs import _parse
 
-# Real osascript output captured from a 3-window Terminal.app session.
+# Real osascript output: first field is the window's STABLE id (not z-order).
 SAMPLE = (
-    "1|||1|||/dev/ttys000|||claude|||⠐ 新增功能列表和文档更新\n"
-    "2|||1|||/dev/ttys003|||claude|||✳ 重新告诉我一次\n"
-    "3|||1|||/dev/ttys005|||-zsh|||maxwell@Mac\n"
+    "72|||1|||/dev/ttys000|||claude|||⠐ 新增功能列表和文档更新\n"
+    "172|||1|||/dev/ttys003|||claude|||✳ 重新告诉我一次\n"
+    "153|||1|||/dev/ttys005|||-zsh|||maxwell@Mac\n"
 )
 
 
-def test_parse_three_windows_one_tab_each():
+def test_parse_window_field_is_stable_id():
     rows = _parse(SAMPLE)
-    assert [(r["window"], r["tab"]) for r in rows] == [(1, 1), (2, 1), (3, 1)]
+    assert [(r["window"], r["tab"]) for r in rows] == [(72, 1), (172, 1), (153, 1)]
 
 
 def test_parse_uses_custom_title_as_name():

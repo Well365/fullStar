@@ -19,9 +19,19 @@ def test_front_window_when_none():
 
 
 def test_indexed_window_and_tab():
+    # Address by STABLE window id, not z-order index (which drifts with focus).
     s = build_read_script(window=2, tab=3)
-    assert "window 2" in s
+    assert "window id 2" in s
     assert "tab 3" in s
+
+
+def test_stale_window_id_falls_back_to_front():
+    # A stored id that no longer exists (or the .env default's window=1) must not
+    # error the capture — it falls back to the front window inside a try.
+    s = build_read_script(window=999, tab=1)
+    assert "window id 999" in s
+    assert "front window" in s
+    assert "try" in s
 
 
 def test_guards_no_window():

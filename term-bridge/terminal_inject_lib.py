@@ -12,7 +12,9 @@ _KEY_ACTIONS = {"enter": "keystroke return", "esc": "key code 53"}
 
 
 def _window_ref(window: int | None) -> str:
-    return "front window" if window is None else f"window {int(window)}"
+    # Stable `window id` — Terminal.app's plain `window N` is z-order (frontmost=1),
+    # which drifts as focus changes, so a stored target would point elsewhere later.
+    return "front window" if window is None else f"window id {int(window)}"
 
 
 def _focus_block(window: int | None, tab: int, session_id: str | None) -> str:

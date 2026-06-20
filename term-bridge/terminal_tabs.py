@@ -3,10 +3,11 @@
 Mirrors iterm_tabs.list_targets so the routing layer can enumerate whichever
 backend TG_TERM_BACKEND selects. Terminal.app addresses each terminal as
 `tab T of window W`; a common layout is several windows each with one tab. The
-AppleScript emits `window|||tab|||tty|||process|||title` per line. The tty (e.g.
-/dev/ttys003) is Terminal.app's *stable* per-session id — unchanged by tab
-reordering or closing other tabs — so routing can anchor on it like iTerm's GUID.
-The title is emitted last so it may safely contain the delimiter.
+AppleScript emits `window|||tab|||tty|||process|||title` per line, where `window`
+is the window's *stable id* (not its z-order position, which drifts as focus
+changes — so a stored target would otherwise point at the wrong window later).
+The tty (e.g. /dev/ttys003) is Terminal.app's stable per-session id, exposed as
+session_id. The title is emitted last so it may safely contain the delimiter.
 """
 from __future__ import annotations
 
@@ -18,9 +19,11 @@ set out to ""
 tell application "Terminal"
     set wCount to count of windows
     repeat with w from 1 to wCount
-        set tCount to count of tabs of window w
+        set theWin to window w
+        set wid to id of theWin
+        set tCount to count of tabs of theWin
         repeat with t from 1 to tCount
-            set theTab to tab t of window w
+            set theTab to tab t of theWin
             set tTitle to ""
             try
                 set tTitle to custom title of theTab
@@ -34,7 +37,7 @@ tell application "Terminal"
             try
                 set ttyStr to tty of theTab
             end try
-            set out to out & w & "|||" & t & "|||" & ttyStr & "|||" & proc & "|||" & tTitle & linefeed
+            set out to out & wid & "|||" & t & "|||" & ttyStr & "|||" & proc & "|||" & tTitle & linefeed
         end repeat
     end repeat
 end tell

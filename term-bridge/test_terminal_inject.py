@@ -11,13 +11,13 @@ def test_session_id_focuses_by_tty_with_positional_fallback():
     assert "set selected of aTab to true" in s
     # positional path remains as the fallback when the tty is gone
     assert "if not didFocus then" in s
-    assert "window 2" in s
+    assert "window id 2" in s
 
 
 def test_no_session_id_uses_positional_only():
     s = build_inject_script(window=2, tab=3, submit_enter=True)
     assert "tty of aTab" not in s
-    assert "window 2" in s and "tab 3" in s
+    assert "window id 2" in s and "tab 3" in s
 
 
 def test_key_script_focuses_by_tty():
@@ -67,7 +67,7 @@ def test_front_window_uses_front_not_index():
 
 def test_indexed_window_referenced():
     s = build_inject_script(window=2, tab=3, submit_enter=True)
-    assert "window 2" in s
+    assert "window id 2" in s
     assert "tab 3" in s
 
 
