@@ -128,6 +128,7 @@ def apply(mod: ModuleType) -> None:
         if mod._iterm_inject_enabled():
             if sys.platform != "darwin":
                 return "saved to inbox (iTerm inject needs macOS)"
+            backend_name = "iTerm" if term_backend.resolve_backend() == "iterm" else "Terminal"
             code, out = _inject_iterm(body, target=target)
             if code == 0:
                 _schedule_iterm_monitor_poll(target=target)
@@ -136,8 +137,8 @@ def apply(mod: ModuleType) -> None:
                 extra = ""
                 if os.environ.get("TG_ITERM_MONITOR_AFTER", "").strip() not in ("", "0", "false", "no", "off"):
                     extra = "\n(output -> TG after delay)"
-                return f"typed into iTerm {tab_note}\n{preview}\n(+ inbox backup){extra}"
-            return f"inbox saved; iTerm failed:\n{out[:800]}"
+                return f"typed into {backend_name} {tab_note}\n{preview}\n(+ inbox backup){extra}"
+            return f"inbox saved; {backend_name} failed:\n{out[:800]}"
         return "task queued — ./mob tg-inbox (set TG_RELAY_ITERM_INJECT=1 for iTerm)"
 
     orig_cmd = mod._handle_command
