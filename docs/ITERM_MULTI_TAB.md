@@ -208,11 +208,15 @@ TG_ITERM_TAB=11      # 默认 tab 11
 
 | 用法 | 说明 |
 |------|------|
-| `/tab` | 弹出当前所有 tab 的 inline 按钮，点选即设 |
-| `/tab 3` / `/tab 1:3` | 直接设为指定 tab（窗口:标签） |
+| `/tab` | 列出当前所有终端 + 弹 inline 按钮，点选即设 |
+| `/tab 2` | 选**第 2 个**终端（扁平序号；多窗口各一 tab 的 Terminal.app 用这个） |
+| `/tab 1:1` | 指定窗口:标签 |
 | `/tab off` | 清除持久默认，回退到 `.env` 默认 |
 
-选中后持久化到 `inbox/target-default.json`，**重启不丢**。后续无前缀消息的注入、回传、卡住自动按 Enter、空闲截图均跟随该 tab。
+> 终端枚举按 `TG_TERM_BACKEND` 自动切换:`terminal`(默认) 查系统 Terminal.app、`iterm` 查 iTerm2。
+> 系统 Terminal.app 常是「多个窗口各一个 tab」,所以用 `/tab <序号>` 按列表顺序选最直观。
+
+选中后持久化到 `inbox/target-default.json`，**重启不丢**。后续无前缀消息的注入、回传、卡住自动按 Enter、空闲截图均跟随该终端。
 
 **三级路由优先级（高 → 低）：**
 

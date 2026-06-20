@@ -11,9 +11,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "term-bridge"))
 
-from iterm_tabs import list_targets  # noqa: E402
 from iterm_target import ItermTarget, resolve_target  # noqa: E402
 from target_default import read_default  # noqa: E402
+from term_backend import resolve_backend  # noqa: E402
 
 # [tab:2] [t2] [mobile-agent] @2: @fz: #2
 _PREFIX_PATTERNS: list[tuple[re.Pattern[str], str]] = [
@@ -52,8 +52,17 @@ class TabInfo:
         return False
 
 
+def _list_targets_for_backend() -> tuple[int, list[dict]]:
+    """Enumerate tabs of whichever terminal TG_TERM_BACKEND selects."""
+    if resolve_backend() == "terminal":
+        from terminal_tabs import list_targets
+    else:
+        from iterm_tabs import list_targets
+    return list_targets()
+
+
 def list_tabs() -> tuple[int, list[TabInfo]]:
-    code, rows = list_targets()
+    code, rows = _list_targets_for_backend()
     if code != 0:
         return code, []
     return 0, [TabInfo(r["window"], r["tab"], r["name"], r.get("sessions", 1)) for r in rows]

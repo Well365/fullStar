@@ -195,7 +195,7 @@ Agent 按 `SKILL.md` 中的 vision loop 操作设备并回传结果。
 |------|------|
 | `/new claude\|codex [prompt]` | 新标签页起一个全新 AI 会话（见上） |
 | `/tabs` | 列出当前终端标签页 + 路由提示 |
-| `/tab [N]` | 选择转发目标 tab（无参弹按钮选，`/tab 3` 直接设，`/tab off` 清除）。设为持久默认,后续无前缀消息都进该 tab |
+| `/tab [N]` | 选择转发目标终端（无参列出+弹按钮，`/tab 2`=选第 2 个，`/tab 1:1`=指定窗口:标签，`/tab off` 清除）。设为持久默认,后续无前缀消息都进该终端。按 `TG_TERM_BACKEND` 自动枚举 iTerm 或系统 Terminal.app（多窗口各一 tab 时用序号选） |
 | `/format html\|markdown\|plain\|screenshot` | 设置回传格式（即时生效，无需重启） |
 | `/stop` | 停止当前运行（向目标会话发一次 Esc） |
 | `/reset` | 重置当前会话（注入 `/clear`） |

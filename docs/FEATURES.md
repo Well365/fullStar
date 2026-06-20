@@ -62,10 +62,11 @@
 
 ## 9. 持久转发目标 — `/tab`
 
-- `/tab`（无参）弹出当前所有 tab 的按钮；`/tab 3` / `/tab 1:3` 直接设；`/tab off` 清除。
-- 选中后持久化到 `inbox/target-default.json`，后续无前缀消息的**注入 + 回传 + 卡住自动按 Enter + 空闲截图**都跟随该 tab，重启不丢。
+- `/tab`（无参）列出当前所有终端并弹按钮；`/tab 2` = 选**第 2 个**（扁平序号，对多窗口各一 tab 的系统 Terminal.app 也适用）；`/tab 1:1` = 指定窗口:标签；`/tab off` 清除。
+- 选中后持久化到 `inbox/target-default.json`，后续无前缀消息的**注入 + 回传 + 卡住自动按 Enter + 空闲截图**都跟随该终端，重启不丢。
+- 终端枚举按 `TG_TERM_BACKEND` 自动切换：`terminal`(默认) 查系统 Terminal.app、`iterm` 查 iTerm2（`terminal_tabs.py` / `iterm_tabs.py`，由 `iterm_route._list_targets_for_backend` 选择）。
 - 路由优先级：单条前缀 `[t3]` > `/tab` 默认 > `.env` 默认。
-- 实现：`term-bridge/target_default.py`（`current_target()` 单一真源）+ `iterm_route.py` + `iterm-monitor.py`。
+- 实现：`term-bridge/target_default.py`（`current_target()` 单一真源）+ `iterm_route.py` + `tg_tab_command.py` + `iterm-monitor.py`。
 
 ---
 
