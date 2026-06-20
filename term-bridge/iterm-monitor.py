@@ -22,12 +22,18 @@ from iterm_extract import (  # noqa: E402
 )
 from interactive_prompt import detect_select_prompt, should_auto_default  # noqa: E402
 from iterm_target import resolve_target  # noqa: E402
+from target_default import current_target  # noqa: E402
 from tg_format import format_reply, strip_terminal_noise  # noqa: E402
 from tg_format_config import get_format  # noqa: E402
 
 
 def _monitor_file(kind: str) -> Path:
-    return ROOT / "inbox" / f"iterm-monitor-{resolve_target().log_suffix()}.{kind}"
+    return ROOT / "inbox" / f"iterm-monitor-{current_target().log_suffix()}.{kind}"
+
+
+def reload_cursors_on_change(old_label: str, new_label: str) -> bool:
+    """True when the resolved target changed since last poll (cursors must reload)."""
+    return old_label != new_label
 
 
 
@@ -345,10 +351,10 @@ def run_loop(*, interval: float, tail_lines: int, once: bool) -> int:
     screenshot_idle = _screenshot_idle_seconds()
     text_fallback = _text_fallback_seconds()
     auto_default = _auto_default_seconds()
-    target = resolve_target()
+    target = current_target()
     print(
         f"iterm-monitor: @landpage_ipa_addr_bot private chat_id={chat_id} "
-        f"target={target.label()} tail={tail_lines} interval={interval}s "
+        f"target={target.label()} (可被 /tab 覆盖) tail={tail_lines} interval={interval}s "
         f"stable_polls={stable_polls} screenshot_idle={screenshot_idle}s "
         f"text_fallback={text_fallback}s",
         flush=True,
@@ -360,6 +366,15 @@ def run_loop(*, interval: float, tail_lines: int, once: bool) -> int:
     last_seen_reply = _read_last_sent()
     last_extract_change_at = _read_last_sent_at() or time.time()
     while True:
+        new_target = current_target()
+        if reload_cursors_on_change(target.log_suffix(), new_target.log_suffix()):
+            target = new_target
+            last_seen_reply = _read_last_sent()
+            last_extract_change_at = _read_last_sent_at() or time.time()
+            last_capture = ""
+            last_stable = ""
+            stable_count = 0
+            stable_since = time.time()
         code, current = _capture_tail(tail_lines)
         ts = time.strftime("%H:%M:%S")
         if code != 0:

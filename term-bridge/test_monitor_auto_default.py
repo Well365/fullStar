@@ -38,3 +38,15 @@ def test_auto_default_seconds_custom(monkeypatch):
 def test_auto_default_caption_default(monkeypatch):
     monkeypatch.delenv("TG_ITERM_AUTO_DEFAULT_CAPTION", raising=False)
     assert "默认" in mon._auto_default_caption()
+
+
+def test_reload_cursors_on_change_detects_switch():
+    import importlib.util, sys
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "iterm_monitor_mod", Path(__file__).resolve().parent / "iterm-monitor.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.reload_cursors_on_change("w1-t1", "w1-t3") is True
+    assert mod.reload_cursors_on_change("w1-t3", "w1-t3") is False
