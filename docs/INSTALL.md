@@ -23,11 +23,20 @@
 只要某一个 Python 包？      → 见下方「分模块安装」
 ```
 
-### 总装（推荐）
+### 一键脚本（最省事）
 
 ```bash
-cd mobile-agent
-chmod +x mobagent mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-relay/setup-telegram.sh
+./oneClickSetup.sh            # 自动 chmod + 从 .env.example 准备 .env + ./mob setup + ./mob check
+./oneClickSetup.sh --test     # 安装后跑冒烟测试（参数透传给 ./mob setup）
+./oneClickStart.sh            # 装好后一键开启全部服务（relay + monitor，= ./mob up）+ 状态汇总
+./oneClickStart.sh --stop     # 关闭全部服务（= ./mob down）
+```
+
+### 总装（推荐，手动分步）
+
+```bash
+cd fullStar
+chmod +x mob mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-relay/setup-telegram.sh
 
 # 1. Telegram（若尚未配置）
 ./mob tg-setup --test
@@ -42,7 +51,7 @@ chmod +x mobagent mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-r
 ./mob check
 ```
 
-**`mobagent setup` 实际调用：** `mob-compose/scripts/setup-all.sh`
+**`mob setup` 实际调用：** `mob-compose/scripts/setup-all.sh`
 
 | 选项 | 说明 |
 |------|------|
@@ -54,7 +63,7 @@ chmod +x mobagent mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-r
 
 ### 根目录 `scripts/`
 
-| 脚本 | mobagent 别名 | 作用 |
+| 脚本 | mob 别名 | 作用 |
 |------|---------------|------|
 | `setup-telegram.sh` | `tg-setup` | TG Token/ChatID + pip 依赖 |
 | `install-skill.sh` | `install-skill` | 安装 Cursor/Claude Skills |
@@ -128,7 +137,7 @@ WDA 辅助：
 
 #### devkit 日常脚本 — `mob-compose/scripts/`
 
-| 脚本 | mobagent | 作用 |
+| 脚本 | mob | 作用 |
 |------|----------|------|
 | `setup-all.sh` | `setup` | 总装 |
 | `check-env.sh` | `check` | 环境检查 |
@@ -167,14 +176,14 @@ WDA 辅助：
 ### Full setup
 
 ```bash
-cd mobile-agent
-chmod +x mobagent mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-relay/setup-telegram.sh
+cd fullStar
+chmod +x mob mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-relay/setup-telegram.sh
 ./mob tg-setup --test
 ./mob setup --test
 ./mob check
 ```
 
-`mobagent setup` → `mob-compose/scripts/setup-all.sh` with `--only`, `--with-ios-wda`, `--test`.
+`mob setup` → `mob-compose/scripts/setup-all.sh` with `--only`, `--with-ios-wda`, `--test`.
 
 ### Per-module scripts
 
@@ -213,8 +222,8 @@ See [../scripts/README.md](../scripts/README.md).
 ### フルセットアップ
 
 ```bash
-cd mobile-agent
-chmod +x mobagent mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-relay/setup-telegram.sh
+cd fullStar
+chmod +x mob mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh tg-relay/setup-telegram.sh
 ./mob tg-setup --test
 ./mob setup --test
 ./mob check

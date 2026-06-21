@@ -1,6 +1,6 @@
 # Telegram Setup / Telegram 配置 / Telegram 設定
 
-> All config lives in `mobile-agent/.env`
+> All config lives in `fullStar/.env`
 
 | Language | Section |
 |----------|---------|
@@ -11,8 +11,8 @@
 **One-click:**
 
 ```bash
-cd mobile-agent
-chmod +x mobagent tg-relay/setup-telegram.sh
+cd fullStar
+chmod +x mob tg-relay/setup-telegram.sh
 ./tg-relay/setup-telegram.sh --test
 # or: ./mob tg-setup --test
 ```

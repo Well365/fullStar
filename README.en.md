@@ -95,8 +95,11 @@ Session-control commands are typed directly into your live terminal, so the rela
 ```bash
 # .env
 TG_RELAY_ALLOWED_CHAT_IDS=6226809975,123456789   # comma/semicolon separated; if empty, only the owner's TELEGRAM_CHAT_ID is admitted
-# TG_RELAY_ALLOW_ALL_CHATS=1                       # explicitly admit all chats (insecure, use with caution)
 ```
+
+> **By design there is no "allow all chats" switch**: this bot types messages straight into a live
+> terminal running an agent with bypassed permissions, so there is no allow-all escape hatch. To let
+> more people drive it, add their chat ids to `TG_RELAY_ALLOWED_CHAT_IDS`.
 
 - If the allowlist **and** `TELEGRAM_CHAT_ID` are **both empty** → the relay **refuses to start** (fail-closed), preventing an exposed instance.
 - Messages from non-allowlisted chats are ignored and never injected into the terminal.
@@ -172,6 +175,18 @@ See **[docs/SKILL_COMPOSE.md](docs/SKILL_COMPOSE.md)** for the full composition 
 `oneClickSetup.sh` does the steps the README would otherwise ask you to do by hand (grant execute
 permission, create `.env` from `.env.example`), then calls the existing `./mob setup`.
 
+### ★ Start (recommended)
+
+Once installed, use the friendly launcher to bring up all services in one shot (= `tg-relay`
+receive + `iterm-monitor` relay-back, i.e. `./mob up`) and print a status summary:
+
+```bash
+./oneClickStart.sh           # start the TG full stack (relay + monitor) + status summary
+./oneClickStart.sh --ios     # also start iproxy (needed for iOS WDA)
+./oneClickStart.sh --watch   # after starting, watch *.py/*.sh/.env changes and auto-reload (for dev)
+./oneClickStart.sh --stop    # stop all services (= ./mob down)
+```
+
 ### Manual, step by step
 
 ```bash
@@ -194,7 +209,7 @@ See **[docs/TELEGRAM_SETUP.md](docs/TELEGRAM_SETUP.md)** for detailed Token / Ch
 
 After installing the Skill, tell the Agent:
 
-> "Run mobile-agent check, then screenshot both Android and iOS and send to Telegram"
+> "Run mob check, then screenshot both Android and iOS and send to Telegram"
 
 The Agent operates the devices via the vision loop in `SKILL.md` and relays the results back.
 
@@ -209,19 +224,23 @@ The Agent operates the devices via the vision loop in `SKILL.md` and relays the 
 | `/new claude\|codex [prompt]` | Start a brand-new AI session in a new tab (see above) |
 | `/tabs` | List current terminal tabs + routing hints |
 | `/tab [N]` | Choose the forwarding target terminal (no arg lists + shows buttons; `/tab 2` = pick the 2nd; `/tab 1:1` = specify window:tab; `/tab off` to clear). Set as the persistent default so subsequent prefix-less messages go there. Auto-enumerates iTerm or the built-in Terminal.app per `TG_TERM_BACKEND` (use the index when multiple windows each have one tab) |
+| `/status` | Per-terminal agent status |
 | `/format html\|markdown\|plain\|screenshot` | Set the relay-back format (takes effect instantly, no restart) |
 | `/stop` | Stop the current run (send one Esc to the target session) |
+| `/interrupt` | Interrupt the current run (Ctrl-C) |
+| `/approve on\|off` | Approval mode toggle: when on, the agent's permissions are gated |
 | `/reset` | Reset the current session (inject `/clear`) |
 | `/compact` | Compact the session context (inject `/compact`) |
 | `/model opus\|sonnet\|haiku\|fable` | View/switch the AI model |
 | `/think low\|medium\|high\|xhigh\|max\|auto` | Set thinking effort (equivalent to `/effort`) |
-| `/shot android` | Android screenshot → TG |
-| `/shot ios` | iOS screenshot → TG |
+| `/shot android\|ios\|mac\|term` | Screenshot: Android / iOS device · Mac screen · terminal → TG |
 | `/tap 540 1200` | Tap (Android by default) |
 | `/tap 200 400 ios` | iOS tap |
 | `/swipe x1 y1 x2 y2` | Swipe |
 | `/check` | Environment check |
 | `/devices` | List devices |
+| `/p [name]` | Quick-prompt library: `/p name` injects that prompt (no arg lists available prompts) |
+| `/diff [path]` | Show git changes (optional path) |
 | `/help` | Show available commands |
 | natural language | Inject into the current target tab (or write to `inbox/pending.txt`) |
 
@@ -245,7 +264,7 @@ ioskit tap 540 1200
 
 ## Configuration
 
-All configuration lives **inside the mobile-agent package**:
+All configuration lives **inside the project root (fullStar)**:
 
 | File | Purpose |
 |------|---------|
@@ -279,4 +298,4 @@ MIT
 - [Install guide (ZH/EN/JA)](docs/INSTALL.md)
 - [Telegram setup (ZH/EN/JA)](docs/TELEGRAM_SETUP.md)
 - [日本語](README.ja.md)
-- [English SKILL](SKILL.md) · [简体中文 SKILL](mob-remote-skill/SKILL.zh-CN.md) · [日本語 SKILL](mob-remote-skill/SKILL.ja.md)
+- [English SKILL](mob-remote-skill/SKILL.md) · [简体中文 SKILL](mob-remote-skill/SKILL.zh-CN.md) · [日本語 SKILL](mob-remote-skill/SKILL.ja.md)

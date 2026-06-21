@@ -94,8 +94,10 @@ TG_ITERM_MONITOR_AFTER=45    # 注入后多久开始抓取回传
 ```bash
 # .env
 TG_RELAY_ALLOWED_CHAT_IDS=6226809975,123456789   # 逗号/分号分隔；留空则默认仅放行机主 TELEGRAM_CHAT_ID
-# TG_RELAY_ALLOW_ALL_CHATS=1                       # 显式放行所有会话（不安全，谨慎）
 ```
+
+> **设计上没有「放行所有会话」开关**：本 Bot 会把消息直接键入到一个以 bypass 权限运行 agent 的实时终端，
+> 因此没有 allow-all 逃生口。要让更多人驱动，请把对应 chat id 加进 `TG_RELAY_ALLOWED_CHAT_IDS`。
 
 - 白名单与 `TELEGRAM_CHAT_ID` **都为空** → relay **拒绝启动**（fail-closed），避免裸奔。
 - 非白名单会话发来的消息一律忽略，不会注入终端。
@@ -167,6 +169,17 @@ mob-remote/                  # 仓库根（原 mobile-agent）
 
 `oneClickSetup.sh` 替你完成 README 里原本要手动做的步骤（赋可执行权限、从 `.env.example` 创建 `.env`），再调用现成的 `./mob setup`。
 
+### ★ 启动（推荐）
+
+装好之后，用友好启动器一键开启全部服务（= `tg-relay` 收令 + `iterm-monitor` 回传，即 `./mob up`），并打印服务状态：
+
+```bash
+./oneClickStart.sh           # 开启 TG 全栈（relay + monitor）+ 状态汇总
+./oneClickStart.sh --ios     # 额外启动 iproxy（iOS WDA 需要）
+./oneClickStart.sh --watch   # 开启后监视 *.py/*.sh/.env 变化，自动重启加载（开发用）
+./oneClickStart.sh --stop    # 关闭全部服务（= ./mob down）
+```
+
 ### 手动分步
 
 ```bash
@@ -189,7 +202,7 @@ chmod +x mob mobagent mob-compose/compose mob-compose/scripts/*.sh scripts/*.sh 
 
 安装 Skill 后，对 Agent 说：
 
-> 「mobile-agent check，然后 Android 和 iOS 都截图发 Telegram」
+> 「mob check，然后 Android 和 iOS 都截图发 Telegram」
 
 Agent 按 `SKILL.md` 中的 vision loop 操作设备并回传结果。
 
@@ -204,19 +217,23 @@ Agent 按 `SKILL.md` 中的 vision loop 操作设备并回传结果。
 | `/new claude\|codex [prompt]` | 新标签页起一个全新 AI 会话（见上） |
 | `/tabs` | 列出当前终端标签页 + 路由提示 |
 | `/tab [N]` | 选择转发目标终端（无参列出+弹按钮，`/tab 2`=选第 2 个，`/tab 1:1`=指定窗口:标签，`/tab off` 清除）。设为持久默认,后续无前缀消息都进该终端。按 `TG_TERM_BACKEND` 自动枚举 iTerm 或系统 Terminal.app（多窗口各一 tab 时用序号选） |
+| `/status` | 各终端 agent 状态 |
 | `/format html\|markdown\|plain\|screenshot` | 设置回传格式（即时生效，无需重启） |
 | `/stop` | 停止当前运行（向目标会话发一次 Esc） |
+| `/interrupt` | 中断当前运行 (Ctrl-C) |
+| `/approve on\|off` | 审批模式开关：开启后 agent 权限受网关把控 |
 | `/reset` | 重置当前会话（注入 `/clear`） |
 | `/compact` | 压缩会话上下文（注入 `/compact`） |
 | `/model opus\|sonnet\|haiku\|fable` | 查看/切换 AI 模型 |
 | `/think low\|medium\|high\|xhigh\|max\|auto` | 设置思考强度（等价 `/effort`） |
-| `/shot android` | Android 截图 → TG |
-| `/shot ios` | iOS 截图 → TG |
+| `/shot android\|ios\|mac\|term` | 截图：Android / iOS 设备 · Mac 屏幕 · 终端 → TG |
 | `/tap 540 1200` | 点击（默认 Android） |
 | `/tap 200 400 ios` | iOS 点击 |
 | `/swipe x1 y1 x2 y2` | 滑动 |
 | `/check` | 环境检查 |
 | `/devices` | 列出设备 |
+| `/p [名字]` | 快捷提示库：`/p 名字` 注入对应提示（无参列出可用提示） |
+| `/diff [路径]` | 查看 git 改动（可带路径） |
 | `/help` | 显示可用命令 |
 | 自然语言 | 注入当前目标标签页（或写入 `inbox/pending.txt`） |
 
@@ -237,7 +254,7 @@ ioskit tap 540 1200
 
 ## 配置
 
-所有配置均在 **mobile-agent 包内**：
+所有配置均在 **项目根目录（fullStar）内**：
 
 | 文件 | 用途 |
 |------|------|
@@ -271,4 +288,4 @@ MIT
 - [安装指南（中/En/日）](docs/INSTALL.md)
 - [Telegram 配置（中/En/日）](docs/TELEGRAM_SETUP.md)
 - [日本語](README.ja.md)
-- [English SKILL](SKILL.md) · [简体中文 SKILL](mob-remote-skill/SKILL.zh-CN.md) · [日本語 SKILL](mob-remote-skill/SKILL.ja.md)
+- [English SKILL](mob-remote-skill/SKILL.md) · [简体中文 SKILL](mob-remote-skill/SKILL.zh-CN.md) · [日本語 SKILL](mob-remote-skill/SKILL.ja.md)
