@@ -29,7 +29,7 @@ _NL_HELP_FOOTER = (
     "\n自然语言 -> 终端 + inbox\n"
     "  前缀示例:\n"
     "  [t2] 问题 — tab 2\n"
-    "  [mobile-agent] 问题 — 匹配目录名\n"
+    "  [myapp] 问题 — 匹配目录名片段\n"
     "  @t3: 问题 — tab 3\n"
     "  (无前缀 = .env 默认 TG_ITERM_TAB)"
 )
@@ -44,7 +44,7 @@ def _build_help_text() -> str:
     Lists every ("name", "desc") as "/name — desc", then appends the
     natural-language prefix examples. Truncated to stay under Telegram's limit.
     """
-    header = "mobile-agent bot\n"
+    header = "mob-remote bot\n"
     cmd_lines = "\n".join(f"/{name} — {desc}" for name, desc in MENU_COMMANDS)
     text = f"{header}\n{cmd_lines}\n{_NL_HELP_FOOTER}"
     return text[:_TELEGRAM_LIMIT]

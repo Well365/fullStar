@@ -222,7 +222,7 @@ def _handle_command(text: str) -> str:
 
     if cmd in ("/start", "/help"):
         return (
-            "mobile-agent bot\n\n"
+            "mob-remote bot\n\n"
             "/check — environment check\n"
             "/shot android|ios|mac|term — screenshot to Telegram\n"
             "/tap X Y [android|ios]\n"
