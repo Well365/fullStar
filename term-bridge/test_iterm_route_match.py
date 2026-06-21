@@ -55,14 +55,30 @@ def test_matching_tab_prefix_unmatched_is_none(monkeypatch):
     assert r.body == "列目录"
 
 
-def test_unmatched_alias_sets_unmatched_key(monkeypatch):
+def test_generic_bracketed_word_is_not_a_routing_miss(monkeypatch):
+    # [TODO]/[x]/[note] etc. are ordinary text, not a configured alias → must
+    # NOT be refused; the body injects into the default tab (legacy behavior).
+    monkeypatch.delenv("TG_ITERM_ALIASES", raising=False)
     monkeypatch.setattr(ir, "read_default", lambda: ItermTarget(window=1, tab=1))
-    monkeypatch.setattr(ir, "list_tabs", lambda: _named_tabs((1, 1, "mobile-agent")))
-    r = ir.route_message("[nope] do thing")
-    assert r.unmatched_prefix == "nope"
+    monkeypatch.setattr(ir, "list_tabs", lambda: _named_tabs((1, 1, "shell")))
+    for msg, body in (("[TODO] fix this", "fix this"), ("[x] done", "done"), ("[note] x", "x")):
+        r = ir.route_message(msg)
+        assert r.unmatched_prefix is None, msg
+        assert r.hit is None
+        assert (r.target.window, r.target.tab) == (1, 1)
+        assert r.body == body
+
+
+def test_configured_alias_with_closed_tab_sets_unmatched_key(monkeypatch):
+    # A real TG_ITERM_ALIASES entry whose target tab is gone IS a routing miss.
+    monkeypatch.setenv("TG_ITERM_ALIASES", "fz:1:7")
+    monkeypatch.setattr(ir, "read_default", lambda: ItermTarget(window=1, tab=1))
+    monkeypatch.setattr(ir, "list_tabs", lambda: _named_tabs((1, 1, "shell")))
+    r = ir.route_message("[fz] deploy")
+    assert r.unmatched_prefix == "fz"
     assert r.hit is None
     assert (r.target.window, r.target.tab) == (1, 1)
-    assert r.body == "do thing"
+    assert r.body == "deploy"
 
 
 def test_prefix_with_empty_rest_unmatched_is_none(monkeypatch):

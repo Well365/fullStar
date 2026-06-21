@@ -17,6 +17,11 @@ mkdir -p "$ROOT/inbox"
 # Print the resolved restart/backoff knobs so the user can see what's in effect.
 print_knobs() {
   echo "  knobs: RESTART_DELAY=${RESTART_DELAY}s MAX_BURST=${MAX_BURST} BURST_WINDOW=${BURST_WINDOW}s"
+  # If MAX_BURST*RESTART_DELAY ≥ window, the window resets before the burst cap
+  # is hit and a crash-loop is never caught — warn so the user fixes the knobs.
+  if (( MAX_BURST * RESTART_DELAY >= BURST_WINDOW )); then
+    echo "  ! warn: MAX_BURST*RESTART_DELAY ≥ BURST_WINDOW — crash-loop guard may never trip" >&2
+  fi
 }
 
 # Rotate the log once at startup if it grew past LOG_MAX_BYTES (keeps one .1).
@@ -27,8 +32,13 @@ rotate_log() {
   local size
   size="$(wc -c <"$f" 2>/dev/null | tr -d ' ')" || return 0
   if [[ -n "$size" ]] && (( size > LOG_MAX_BYTES )); then
-    mv -f "$f" "$f.1" 2>/dev/null || : >"$f"
-    echo "▶ rotated log ($size bytes > ${LOG_MAX_BYTES}) → $f.1"
+    # Never truncate as a fallback — that would discard the very data rotation
+    # is meant to preserve. On mv failure, keep the log and warn.
+    if mv -f "$f" "$f.1" 2>/dev/null; then
+      echo "▶ rotated log ($size bytes > ${LOG_MAX_BYTES}) → $f.1"
+    else
+      echo "  ! log rotation skipped (mv failed, log kept): $f" >&2
+    fi
   fi
 }
 

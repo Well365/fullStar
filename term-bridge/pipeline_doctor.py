@@ -211,10 +211,37 @@ def _check_backend() -> Check:
     return Check("终端后端", "pass", f"{backend}")
 
 
+def _app_running(app: str) -> bool:
+    """True if `app` is already running, WITHOUT launching it.
+
+    `application "X" is running` queries state; unlike `tell application "X" …`
+    it never autolaunches — so a read-only diagnostic can't boot a GUI app.
+    Best-effort: any failure is treated as "unknown / not running".
+    """
+    if sys.platform != "darwin":
+        return False
+    import subprocess
+
+    try:
+        r = subprocess.run(
+            ["osascript", "-e", f'application "{app}" is running'],
+            capture_output=True, text=True, timeout=10, stdin=subprocess.DEVNULL,
+        )
+    except Exception:  # noqa: BLE001 — diagnostics must never crash
+        return False
+    return r.returncode == 0 and r.stdout.strip().lower() == "true"
+
+
 def _check_target() -> Check:
     """At least one tab of the active backend is open to inject into."""
     if sys.platform != "darwin":
         return Check("目标窗口", "warn", "非 macOS，无法枚举终端窗口")
+    app = _BACKEND_APP.get(resolve_backend(), "Terminal")
+    if not _app_running(app):
+        return Check(
+            "目标窗口", "warn", f"{app} 未运行",
+            fix=f"打开 {app} 或用 /new 新建会话",
+        )
     try:
         from iterm_route import list_tabs
 
@@ -240,6 +267,9 @@ def _check_automation() -> Check:
     if sys.platform != "darwin":
         return Check("自动化权限", "warn", "非 macOS，跳过")
     app = _BACKEND_APP.get(resolve_backend(), "Terminal")
+    if not _app_running(app):
+        # Don't probe a stopped app: probing `tell application X` would launch it.
+        return Check("自动化权限", "warn", f"{app} 未运行，跳过权限探测")
     try:
         ok, message = access_hint.probe_automation_permission(app)
     except Exception as exc:  # osascript is fragile; degrade, don't crash

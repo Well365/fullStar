@@ -21,6 +21,12 @@ mkdir -p "$ROOT/inbox"
 # Print the resolved restart/backoff knobs so the user can see what's in effect.
 print_monitor_knobs() {
   echo "  knobs: MON_RESTART_DELAY=${MON_RESTART_DELAY}s MON_MAX_BURST=${MON_MAX_BURST} MON_BURST_WINDOW=${MON_BURST_WINDOW}s"
+  # The anti-flap guard only trips if MAX_BURST restarts happen within the
+  # window. If MAX_BURST*RESTART_DELAY ≥ window, the window resets first and a
+  # crash-loop is never caught — warn so the user fixes the knobs.
+  if (( MON_MAX_BURST * MON_RESTART_DELAY >= MON_BURST_WINDOW )); then
+    echo "  ! warn: MON_MAX_BURST*MON_RESTART_DELAY ≥ MON_BURST_WINDOW — crash-loop guard may never trip" >&2
+  fi
 }
 
 # Rotate the log once at startup if it grew past MON_LOG_MAX_BYTES (keeps one .1).
@@ -31,8 +37,13 @@ rotate_log() {
   local size
   size="$(wc -c <"$f" 2>/dev/null | tr -d ' ')" || return 0
   if [[ -n "$size" ]] && (( size > MON_LOG_MAX_BYTES )); then
-    mv -f "$f" "$f.1" 2>/dev/null || : >"$f"
-    echo "▶ rotated log ($size bytes > ${MON_LOG_MAX_BYTES}) → $f.1"
+    # Never truncate as a fallback — that would discard the very data rotation
+    # is meant to preserve. On mv failure, keep the log and warn.
+    if mv -f "$f" "$f.1" 2>/dev/null; then
+      echo "▶ rotated log ($size bytes > ${MON_LOG_MAX_BYTES}) → $f.1"
+    else
+      echo "  ! log rotation skipped (mv failed, log kept): $f" >&2
+    fi
   fi
 }
 

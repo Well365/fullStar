@@ -151,16 +151,22 @@ if not INBOX.is_dir():
     print(f"(no inbox dir at {INBOX})")
     raise SystemExit(0)
 
-# Live tab suffixes, e.g. {"w81-t1", ...}. Empty set + ok=False → age fallback.
+# Live tab suffixes, e.g. {"w81-t1", ...}. We only trust the live set when the
+# backend reported AT LEAST ONE tab: an empty result (app autolaunched with no
+# windows, or a transient AppleScript hiccup) is "unknown", NOT "all closed" —
+# otherwise we'd wipe every open tab's state (incl. the dedup marks the
+# button-spam fix relies on). Unknown → fall back to the age-based path.
 live = set()
 have_live = False
 try:
     from iterm_route import list_tabs
     code, tabs = list_tabs()
-    if code == 0:
+    if code == 0 and tabs:
         have_live = True
         for t in tabs:
             live.add(f"w{t.window}-t{t.tab}")
+    elif code == 0:
+        print("(backend reported 0 open tabs — treating as unknown, using age fallback)")
 except Exception as exc:
     print(f"(could not enumerate live tabs: {exc} — using age fallback)")
 
@@ -177,18 +183,23 @@ _suf = re.compile(r"^iterm-(?:monitor|session)-(w\d+-t\d+)\b")
 _protected = {"iterm-monitor-daemon.pid", "iterm-monitor.log"}
 
 cutoff = time.time() - days * 86400
+recent_floor = time.time() - 3600  # never reap a file touched in the last hour
 to_remove = []
 for p in candidates:
     if p.name in _protected:
         continue
     m = _suf.match(p.name)
-    if have_live and m:
+    if not m:
+        continue  # only ever touch well-formed iterm-(monitor|session)-wX-tY files
+    if have_live:
         if m.group(1) not in live:
             to_remove.append(p)
-    elif not have_live:
-        # Age-based fallback: only files older than N days.
+    else:
+        # Age-based fallback (live tabs unknown): only files older than N days,
+        # and never one written in the last hour (likely an open, idle tab).
         try:
-            if p.stat().st_mtime < cutoff:
+            mtime = p.stat().st_mtime
+            if mtime < cutoff and mtime < recent_floor:
                 to_remove.append(p)
         except OSError:
             pass

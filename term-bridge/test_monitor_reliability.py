@@ -131,7 +131,12 @@ def test_target_lost_alert_is_one_shot_per_episode(monkeypatch: pytest.MonkeyPat
     assert sent == [mon._TARGET_LOST_ALERT, mon._TARGET_LOST_ALERT]
 
 
-def test_target_lost_alert_retries_when_send_fails(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_target_lost_alert_marks_on_attempt_to_bound_dual_outage(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # When the target is gone AND Telegram is down, the alert is attempted ONCE
+    # and the mark is set on attempt — so the loop can't spawn a send subprocess
+    # on every poll. (_clear_target_lost re-arms it once the target recovers.)
     monkeypatch.setattr(mon, "_monitor_file", lambda kind: tmp_path / f"m.{kind}")
     calls: list[int] = []
 
@@ -140,9 +145,12 @@ def test_target_lost_alert_retries_when_send_fails(monkeypatch: pytest.MonkeyPat
         return 1, "telegram 500"
 
     monkeypatch.setattr(mon, "_send_tg", _failing)
-    mon._alert_target_lost()  # send fails → mark NOT set
-    assert mon._mark_is_set("target-lost-mark") is False
-    mon._alert_target_lost()  # so the next poll may retry the single alert
+    mon._alert_target_lost()
+    assert mon._mark_is_set("target-lost-mark") is True
+    mon._alert_target_lost()  # already marked → no second send during the outage
+    assert len(calls) == 1
+    mon._clear_target_lost()  # recovery re-arms the alert
+    mon._alert_target_lost()
     assert len(calls) == 2
 
 
@@ -244,9 +252,10 @@ def test_double_failure_surfaces_screen_recording_hint(monkeypatch: pytest.Monke
     assert shot.SCREEN_RECORDING_HINT in msg  # the reason is surfaced in the result
     # The owner-alert was attempted and carried the screen-recording reason.
     assert any("回传失败" in a and "屏幕录制" in a for a in alert_attempts)
-    # The alert send itself failed here, so the mark stays unset (so a future
-    # poll can retry the single alert) — matching the target-lost retry policy.
-    assert mon._mark_is_set("send-fail-mark") is False
+    # Mark is set on attempt (bounded retry): one alert per failure episode even
+    # if Telegram is down, so the loop can't re-spawn a send every poll. A later
+    # successful reply send clears it (see test_successful_send_clears_failure_mark).
+    assert mon._mark_is_set("send-fail-mark") is True
 
 
 def test_successful_send_clears_failure_mark(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

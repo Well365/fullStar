@@ -195,12 +195,20 @@ def _route_for_tab(
 def _route_for_alias(
     tabs: list[TabInfo], key: str, rest: str, default: ItermTarget
 ) -> RouteResult:
-    """Resolve an alias/key prefix against an already-enumerated tab list."""
+    """Resolve an alias/key prefix against an already-enumerated tab list.
+
+    The `[word]` / `@word:` pattern also matches ordinary bracketed text like
+    `[TODO]`, `[x]`, `[1]`, so an unmatched key is only treated as a *routing
+    miss* (refused) when it's a CONFIGURED alias (TG_ITERM_ALIASES) whose tab
+    is gone. A generic unmatched word is not routing intent → inject the body
+    into the default tab (unmatched_prefix stays None), matching legacy behavior.
+    """
     hit = _find_by_key(tabs, key)
     if hit:
         target = ItermTarget(window=hit.window, tab=hit.tab, session_id=hit.session_id)
         return RouteResult(target, rest, hit, None)
-    return RouteResult(default, rest, None, key)
+    is_configured_alias = key.strip().lower() in _parse_aliases()
+    return RouteResult(default, rest, None, key if is_configured_alias else None)
 
 
 def route_message(text: str) -> RouteResult:

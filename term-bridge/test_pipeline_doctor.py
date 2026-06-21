@@ -174,8 +174,17 @@ def test_target_non_darwin_warns(monkeypatch: pytest.MonkeyPatch) -> None:
     assert pd._check_target().status == "warn"
 
 
+def test_target_app_not_running_warns(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The backend app being stopped must NOT autolaunch it (read-only diagnostic).
+    monkeypatch.setattr(pd.sys, "platform", "darwin")
+    monkeypatch.setattr(pd, "_app_running", lambda app: False)
+    c = pd._check_target()
+    assert c.status == "warn" and "未运行" in c.detail
+
+
 def test_target_tabs_present_passes(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pd.sys, "platform", "darwin")
+    monkeypatch.setattr(pd, "_app_running", lambda app: True)
     import iterm_route
 
     monkeypatch.setattr(iterm_route, "list_tabs", lambda: (0, ["tab1", "tab2"]))
@@ -185,6 +194,7 @@ def test_target_tabs_present_passes(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_target_zero_tabs_warns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pd.sys, "platform", "darwin")
+    monkeypatch.setattr(pd, "_app_running", lambda app: True)
     import iterm_route
 
     monkeypatch.setattr(iterm_route, "list_tabs", lambda: (0, []))
@@ -193,6 +203,7 @@ def test_target_zero_tabs_warns(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_target_enumeration_error_warns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pd.sys, "platform", "darwin")
+    monkeypatch.setattr(pd, "_app_running", lambda app: True)
     import iterm_route
 
     def _boom() -> tuple[int, list]:
@@ -210,8 +221,22 @@ def test_automation_non_darwin_warns(monkeypatch: pytest.MonkeyPatch) -> None:
     assert pd._check_automation().status == "warn"
 
 
+def test_automation_app_not_running_warns(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Probing a stopped app would launch it; gate must skip with a warn instead.
+    monkeypatch.setattr(pd.sys, "platform", "darwin")
+    monkeypatch.setattr(pd, "_app_running", lambda app: False)
+    called: list[str] = []
+    monkeypatch.setattr(
+        pd.access_hint, "probe_automation_permission",
+        lambda app: (called.append(app) or (True, "ok")),
+    )
+    assert pd._check_automation().status == "warn"
+    assert called == []  # the autolaunching probe was never invoked
+
+
 def test_automation_granted_passes(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pd.sys, "platform", "darwin")
+    monkeypatch.setattr(pd, "_app_running", lambda app: True)
     monkeypatch.setattr(
         pd.access_hint, "probe_automation_permission", lambda app: (True, "ok")
     )
@@ -220,6 +245,7 @@ def test_automation_granted_passes(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_automation_denied_fails_with_hint(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pd.sys, "platform", "darwin")
+    monkeypatch.setattr(pd, "_app_running", lambda app: True)
     monkeypatch.setattr(
         pd.access_hint,
         "probe_automation_permission",
@@ -231,6 +257,7 @@ def test_automation_denied_fails_with_hint(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_automation_probe_raises_warns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pd.sys, "platform", "darwin")
+    monkeypatch.setattr(pd, "_app_running", lambda app: True)
 
     def _boom(app: str) -> tuple[bool, str]:
         raise OSError("osascript gone")

@@ -448,13 +448,17 @@ def _send_owner_alert(text: str) -> bool:
 
 
 def _alert_target_lost() -> None:
-    """Fire the target-lost alert at most once per outage episode."""
+    """Fire the target-lost alert at most once per outage episode.
+
+    The mark is set on the first ATTEMPT (not only on a successful send): if the
+    target is gone AND Telegram is unreachable, marking on attempt prevents the
+    loop from spawning a (60s-timeout) send subprocess on every poll. The mark
+    clears on recovery (_clear_target_lost), so a later outage re-alerts.
+    """
     if not should_alert_once(condition=True, already_marked=_mark_is_set("target-lost-mark")):
         return
-    if _send_owner_alert(_TARGET_LOST_ALERT):
-        _set_mark("target-lost-mark")
-    # On a failed send we leave the mark unset so the next outage poll can retry
-    # the one alert; _send_owner_alert already prints, so this cannot storm.
+    _set_mark("target-lost-mark")
+    _send_owner_alert(_TARGET_LOST_ALERT)
 
 
 def _clear_target_lost() -> None:
@@ -478,8 +482,10 @@ def _alert_send_failed(reason: str) -> None:
     """
     if not should_alert_once(condition=True, already_marked=_mark_is_set("send-fail-mark")):
         return
-    if _send_owner_alert(f"⚠️ 回传失败：{_flatten_reason(reason)}（发 /status 排查）"):
-        _set_mark("send-fail-mark")
+    # Mark on attempt (not only on success) so a sustained Telegram outage can't
+    # re-spawn a send every poll; _clear_send_failed re-arms after a good send.
+    _set_mark("send-fail-mark")
+    _send_owner_alert(f"⚠️ 回传失败：{_flatten_reason(reason)}（发 /status 排查）")
 
 
 def _clear_send_failed() -> None:
@@ -681,6 +687,10 @@ def run_loop(*, interval: float, tail_lines: int, once: bool) -> int:
                         print(f"[{ts}] screenshot: {shot_msg}", flush=True)
                     else:
                         print(f"[{ts}] screenshot error: {shot_msg}", flush=True)
+                        # Idle screenshot is the only channel here — surface a
+                        # denied Screen-Recording permission (the reason carries
+                        # the hint) instead of dying silently in the daemon log.
+                        _alert_send_failed(shot_msg)
 
         # Interactive prompt → push the options as inline buttons (once per
         # distinct prompt) so the operator picks the right one from the phone,
