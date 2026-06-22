@@ -244,6 +244,7 @@ The Agent operates the devices via the vision loop in `SKILL.md` and relays the 
 | `/swipe x1 y1 x2 y2` | Swipe |
 | `/check` | Environment check |
 | `/devices` | List devices |
+| `/unlock` | Unlock Android (numeric PIN; set `ANDROID_UNLOCK_PIN` in `.env`; wake→swipe→type PIN→Enter, then screenshots to confirm) |
 | `/p [name]` | Quick-prompt library: `/p name` injects that prompt (no arg lists available prompts) |
 | `/diff [path]` | Show git changes (optional path) |
 | `/help` | Show available commands |

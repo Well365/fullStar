@@ -16,6 +16,7 @@ MENU_COMMANDS: list[tuple[str, str]] = [
     ("shot", "截图：设备 / Mac 屏幕 / 终端"),
     ("format", "设置回传格式"),
     ("devices", "列出设备"),
+    ("unlock", "解锁 Android（数字 PIN）"),
     ("check", "环境检查"),
     ("stop", "关闭弹窗 / 取消输入 (Esc)"),
     ("interrupt", "停止运行 (Ctrl-C)"),

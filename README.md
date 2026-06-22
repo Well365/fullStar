@@ -236,6 +236,7 @@ Agent 按 `SKILL.md` 中的 vision loop 操作设备并回传结果。
 | `/swipe x1 y1 x2 y2` | 滑动 |
 | `/check` | 环境检查 |
 | `/devices` | 列出设备 |
+| `/unlock` | 解锁 Android（数字 PIN，需 `.env` 配 `ANDROID_UNLOCK_PIN`；唤醒→上滑→输 PIN→回车，解锁后截图确认） |
 | `/p [名字]` | 快捷提示库：`/p 名字` 注入对应提示（无参列出可用提示） |
 | `/diff [路径]` | 查看 git 改动（可带路径） |
 | `/help` | 显示可用命令 |

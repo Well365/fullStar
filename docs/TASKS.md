@@ -103,7 +103,7 @@
 
 | # | 功能 | 说明 |
 |---|------|------|
-| F1 | `/unlock` 远程解锁 Android | 数字 PIN：唤醒→上滑→输 PIN→回车（PIN 存 .env） |
+| ✅ F1 | `/unlock` 远程解锁 Android — 完成 | droid-ctl `unlock`（动态算坐标、逐位 keyevent 输 PIN、PIN 不进 argv）+ relay `/unlock` 命令 + 菜单；PIN 存 `.env` `ANDROID_UNLOCK_PIN`。测试 6 项；唤醒实测有效。仅数字 PIN，图案/指纹不支持。 |
 | F2 | 审计日志 + `/last` | 回看最近注入/回复，安全可追溯 |
 | F3 | 高危命令二次确认 | 注入含 `rm -rf` 等模式时要求确认 |
 | F4 | 多 Mac / 多设备编排 | 一个 bot 管多机，`/host` 切换 |
