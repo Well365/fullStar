@@ -135,6 +135,25 @@ def totp_enabled() -> bool:
     return bool(get_totp_secret())
 
 
+def set_heartbeat(interval: int, grace: int, action: str) -> None:
+    """Dead-man switch: ping TG every `interval`s; if no ack within `grace`s,
+    run `action` (lock|veil). interval<=0 disables."""
+    cfg = load_config()
+    cfg["hb_interval"] = int(interval)
+    cfg["hb_grace"] = int(grace)
+    cfg["hb_action"] = action if action in ("lock", "veil") else "lock"
+    save_config(cfg)
+
+
+def heartbeat_cfg() -> tuple[int, int, str]:
+    cfg = load_config()
+    return (
+        int(cfg.get("hb_interval", 0)),
+        int(cfg.get("hb_grace", 300)),
+        cfg.get("hb_action", "lock"),
+    )
+
+
 def _password_env() -> dict:
     cfg = load_config()
     env = dict(os.environ)

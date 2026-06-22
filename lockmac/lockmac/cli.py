@@ -104,6 +104,23 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif cmd == "2fa-off":
         core.set_totp_secret(""); ok, msg = True, "二步验证已关闭"
+    elif cmd == "heartbeat":
+        # heartbeat <interval_s> [grace_s] [lock|veil]   (interval 0 = off)
+        if not rest:
+            iv, gr, ac = core.heartbeat_cfg()
+            ok, msg = True, (f"心跳: {'off' if iv<=0 else f'每{iv}s'}"
+                             f" · 宽限{gr}s · 动作{ac}\n"
+                             "用法: lockmac heartbeat <间隔秒> [宽限秒] [lock|veil]（0=关）")
+        else:
+            try:
+                iv = int(rest[0])
+                gr = int(rest[1]) if len(rest) > 1 else 300
+                ac = rest[2] if len(rest) > 2 else "lock"
+                core.set_heartbeat(iv, gr, ac)
+                ok, msg = True, (f"✓ 心跳已设：每 {iv}s 签到，{gr}s 未响应则 {ac}"
+                                 if iv > 0 else "✓ 心跳已关闭")
+            except ValueError:
+                ok, msg = False, "用法: lockmac heartbeat <间隔秒> [宽限秒] [lock|veil]"
     elif cmd == "tg-install":
         ok, msg = core.install_tg_agent()
     elif cmd == "tg-uninstall":

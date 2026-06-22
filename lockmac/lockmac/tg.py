@@ -104,17 +104,59 @@ def _dispatch(action: str, arg: str = "") -> str:
     return core.status()
 
 
-def listen(poll_timeout: int = 25) -> int:
-    """Long-poll getUpdates; act on /lock /unlock /status from the saved chat.
+def send_heartbeat() -> bool:
+    """Send a check-in message with an inline '✅ 我在' button (dead-man switch)."""
+    token, chat = _creds()
+    if not token or not chat:
+        return False
+    markup = json.dumps({"inline_keyboard": [[{"text": "✅ 我在", "callback_data": "hb_ack"}]]})
+    try:
+        _api(token, "sendMessage", {
+            "chat_id": chat,
+            "text": "⏰ 心跳签到：在吗？未在宽限内点击将自动锁定。",
+            "reply_markup": markup,
+        }, timeout=15)
+        return True
+    except (urllib.error.URLError, OSError, ValueError):
+        return False
 
-    Only the configured chat id is honored (fail-closed). Runs until killed.
+
+def answer_callback(cb_id: str, text: str = "已签到 ✓") -> None:
+    token, _ = _creds()
+    if not token or not cb_id:
+        return
+    try:
+        _api(token, "answerCallbackQuery",
+             {"callback_query_id": cb_id, "text": text}, timeout=10)
+    except (urllib.error.URLError, OSError, ValueError):
+        pass
+
+
+def heartbeat_due(last_sent: float, now: float, interval: int) -> bool:
+    """True if it's time to send the next heartbeat (pure)."""
+    return interval > 0 and (now - last_sent) >= interval
+
+
+def deadman_triggered(last_sent: float, last_ack: float, now: float, grace: int) -> bool:
+    """True if a sent heartbeat went unacked past the grace window (pure)."""
+    return last_sent > 0 and last_ack < last_sent and (now - last_sent) >= grace
+
+
+def listen(poll_timeout: int = 10) -> int:
+    """Long-poll getUpdates; act on /veil /unveil /lock /status, run the dead-man
+    heartbeat, and honor '✅ 我在' button acks. Only the configured chat is
+    honored (fail-closed). Runs until killed.
     """
     token, chat = _creds()
     if not token or not chat:
         print("tg-listen: no token/chat — run `lockmac tg-setup` first")
         return 1
-    print(f"lockmac tg-listen: polling (chat={chat})")
+    interval, grace, action = core.heartbeat_cfg()
+    extra = f" · heartbeat {interval}s/grace {grace}s→{action}" if interval > 0 else ""
+    print(f"lockmac tg-listen: polling (chat={chat}){extra}")
     offset = 0
+    last_sent = 0.0
+    last_ack = time.time()
     while True:
         try:
             resp = _api(token, "getUpdates",
@@ -123,15 +165,28 @@ def listen(poll_timeout: int = 25) -> int:
         except (urllib.error.URLError, OSError, ValueError) as exc:
             print(f"getUpdates error: {exc}")
             time.sleep(3)
-            continue
+            resp = {}
         for item in resp.get("result") or []:
             offset = item["update_id"] + 1
             msg = item.get("message") or {}
-            if str((msg.get("chat") or {}).get("id")) != str(chat):
-                continue  # fail-closed: ignore everyone but the configured chat
-            text = msg.get("text") or ""
-            action = parse_command(text)
-            if action:
-                parts = text.split()
-                arg = parts[1] if len(parts) > 1 else ""
-                notify(_dispatch(action, arg))
+            if str((msg.get("chat") or {}).get("id")) == str(chat):
+                text = msg.get("text") or ""
+                act = parse_command(text)
+                if act:
+                    parts = text.split()
+                    arg = parts[1] if len(parts) > 1 else ""
+                    notify(_dispatch(act, arg))
+            cb = item.get("callback_query")
+            if cb and str(((cb.get("message") or {}).get("chat") or {}).get("id")) == str(chat):
+                if cb.get("data") == "hb_ack":
+                    last_ack = time.time()
+                    answer_callback(cb.get("id", ""))
+        if interval > 0:
+            now = time.time()
+            if heartbeat_due(last_sent, now, interval):
+                if send_heartbeat():
+                    last_sent = now
+            if deadman_triggered(last_sent, last_ack, now, grace):
+                core.start() if action == "veil" else core.system_lock()
+                notify("⏰ 未在宽限内响应心跳，已自动锁定。")
+                last_ack = time.time()  # fire once per missed beat

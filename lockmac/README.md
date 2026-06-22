@@ -87,6 +87,22 @@ chat id is honored, fail-closed):
 
 Use `tg-listen` for a foreground run, or `tg-install` to keep it always-on.
 
+### Dead-man heartbeat (auto-lock if you don't respond)
+
+`tg-listen` can periodically ping Telegram with a check-in button; if you don't
+tap it within the grace window, lockmac auto-locks:
+
+```bash
+lockmac heartbeat 1800 600 lock   # every 30min, 10min grace, then system lock
+lockmac heartbeat 1800 600 veil   # …or raise the removable veil instead
+lockmac heartbeat 0               # off
+lockmac heartbeat                 # show current setting
+```
+
+The check-in arrives as a message with a **✅ 我在** button — tap it to reset
+the timer. Miss the grace window and the configured action (`lock` = real system
+lock, `veil` = overlay) fires automatically. Runs inside `tg-listen`.
+
 > One bot, one poller: getUpdates allows a single consumer per token. If
 > something else already polls that bot (e.g. another relay), give lockmac its
 > own bot — otherwise they conflict (Telegram 409).
