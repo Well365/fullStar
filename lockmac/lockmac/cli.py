@@ -55,10 +55,12 @@ def main(argv: list[str] | None = None) -> int:
     cmd = argv[0] if argv else "status"
     rest = argv[1:]
 
-    if cmd == "on":
+    if cmd in ("on", "veil"):
         ok, msg = core.start(timeout=float(rest[0]) if rest else 0)
-    elif cmd == "off":
+    elif cmd in ("off", "unveil"):
         ok, msg = core.stop()
+    elif cmd == "lock":
+        ok, msg = core.system_lock()  # real system lock (one-way)
     elif cmd == "status":
         ok, msg = True, core.status()
     elif cmd == "setup":
@@ -96,9 +98,10 @@ def main(argv: list[str] | None = None) -> int:
         ok, msg = core.uninstall_tg_agent()
     else:
         ok, msg = False, (
-            f"usage: lockmac on|off|status|setup|passwd|set-password|boot|"
+            f"usage: lockmac veil|unveil|lock|status|setup|passwd|set-password|boot|"
             f"install-agent|uninstall-agent|tg-setup|tg-test|tg-listen|"
-            f"tg-install|tg-uninstall (got {cmd!r})"
+            f"tg-install|tg-uninstall (got {cmd!r})\n"
+            f"  veil/unveil = removable privacy overlay; lock = real system lock (one-way)"
         )
     print(msg)
     return 0 if ok else 1

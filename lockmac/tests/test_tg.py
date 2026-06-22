@@ -3,17 +3,18 @@ from lockmac import tg
 
 
 def test_parse_command_known():
-    assert tg.parse_command("/lock") == "lock"
-    assert tg.parse_command("/unlock") == "unlock"
+    assert tg.parse_command("/veil") == "veil"
+    assert tg.parse_command("/unveil") == "unveil"
+    assert tg.parse_command("/lock") == "syslock"   # real system lock
     assert tg.parse_command("/status") == "status"
 
 
 def test_parse_command_with_botname_suffix():
-    assert tg.parse_command("/lock@MyBot") == "lock"
+    assert tg.parse_command("/lock@MyBot") == "syslock"
 
 
 def test_parse_command_case_and_whitespace():
-    assert tg.parse_command("  /UNLOCK  ") == "unlock"
+    assert tg.parse_command("  /VEIL  ") == "veil"
 
 
 def test_parse_command_unknown():

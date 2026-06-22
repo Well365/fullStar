@@ -23,8 +23,14 @@ import urllib.request
 from lockmac import core
 
 _API = "https://api.telegram.org/bot{token}/{method}"
-# action keyword → which command; the only texts lockmac's listener acts on.
-_COMMANDS = {"/lock": "lock", "/unlock": "unlock", "/status": "status"}
+# Telegram command → action. /veil & /unveil drive the removable overlay;
+# /lock is the REAL system lock (one-way: cannot be undone remotely).
+_COMMANDS = {
+    "/veil": "veil",
+    "/unveil": "unveil",
+    "/lock": "syslock",
+    "/status": "status",
+}
 
 
 def _api(token: str, method: str, params: dict | None = None, timeout: int = 35) -> dict:
@@ -85,10 +91,12 @@ def fetch_chat_id(token: str) -> str | None:
 
 
 def _dispatch(action: str) -> str:
-    if action == "lock":
+    if action == "veil":
         return core.start()[1]
-    if action == "unlock":
+    if action == "unveil":
         return core.stop()[1]
+    if action == "syslock":
+        return core.system_lock()[1]
     return core.status()
 
 

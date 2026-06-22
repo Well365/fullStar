@@ -200,6 +200,33 @@ def stop() -> tuple[bool, str]:
     return True, "veil off"
 
 
+def system_lock() -> tuple[bool, str]:
+    """Real macOS screen lock (loginwindow). ONE-WAY: cannot be undone remotely —
+    you must enter the system password at the machine. Contrast with the veil,
+    which is a removable privacy overlay.
+
+    Override the lock command with LOCKMAC_SYSTEM_LOCK_CMD.
+    """
+    if sys.platform != "darwin":
+        return False, "macOS only"
+    custom = os.environ.get("LOCKMAC_SYSTEM_LOCK_CMD", "").strip()
+    if custom:
+        rc = subprocess.run(custom, shell=True).returncode
+        return (rc == 0), ("system locked" if rc == 0 else f"lock cmd exit {rc}")
+    # Ctrl-Cmd-Q = the standard "Lock Screen" shortcut (needs Accessibility).
+    r = subprocess.run(
+        ["osascript", "-e",
+         'tell application "System Events" to keystroke "q" '
+         "using {control down, command down}"],
+        capture_output=True, text=True,
+    )
+    if r.returncode == 0:
+        return True, "🔒 系统已锁屏（真锁；需系统密码解除，远程无法解）"
+    # Fallback: sleep the display — locks if "require password immediately" is set.
+    subprocess.run(["pmset", "displaysleepnow"], capture_output=True)
+    return True, "🔒 系统已锁屏（displaysleep 兜底）"
+
+
 def status() -> str:
     pid = running_pid()
     cfg = load_config()

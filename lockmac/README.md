@@ -26,11 +26,19 @@ pip install -e .          # needs swiftc (Xcode CLT) on macOS
 
 ## Use
 
+Two levels of "lock":
+
+| Command | Level | Remote-undo? |
+|---|---|---|
+| `veil` / `unveil` (= `on` / `off`) | app overlay — black out the screen, keep working | ✅ yes (password / Telegram) |
+| `lock` | **real macOS system lock** (loginwindow) | ❌ no — one-way; needs the system password at the machine |
+
 ```bash
 lockmac setup            # set a password + choose login autostart (installs LaunchAgent)
-lockmac on               # raise the veil (screen goes black; you keep working)
-lockmac on 30            # ...auto-dismiss after 30s (safety backstop)
-lockmac off              # dismiss
+lockmac veil             # raise the privacy overlay (screen black; you keep working)
+lockmac veil 30          # ...auto-dismiss after 30s (safety backstop)
+lockmac unveil           # dismiss the overlay
+lockmac lock             # REAL system lock — one-way, cannot be undone remotely
 lockmac status
 lockmac passwd           # change password (verifies the current one first)
 lockmac boot on|off      # toggle "veil on next login"
@@ -58,9 +66,13 @@ lockmac tg-install   # …or install a KeepAlive LaunchAgent: tg-listen runs at
                      #   login and is restarted if it ever exits (tg-uninstall to remove)
 ```
 
-From your chat send `/lock`, `/unlock`, `/status`. Only the configured chat id is
-honored (fail-closed). Use `tg-listen` for a foreground run, or `tg-install` to
-keep it always-on across logins.
+From your chat send `/veil`, `/unveil`, `/lock`, or `/status` (only the configured
+chat id is honored, fail-closed):
+- `/veil` / `/unveil` — raise / dismiss the removable overlay
+- `/lock` — **real system lock** (one-way; you can lock remotely but must unlock
+  at the machine with the system password)
+
+Use `tg-listen` for a foreground run, or `tg-install` to keep it always-on.
 
 > One bot, one poller: getUpdates allows a single consumer per token. If
 > something else already polls that bot (e.g. another relay), give lockmac its
