@@ -1,4 +1,4 @@
-// mac-veil.swift — a privacy veil: a black, top-most overlay covering every
+// lockmac.swift — a privacy veil: a black, top-most overlay covering every
 // display so onlookers can't see the screen, WITHOUT locking the Mac.
 //
 // Why this works with the rest of mob-remote:
@@ -13,7 +13,7 @@
 // THREE ways to dismiss (so you can NEVER get locked out):
 //   1. Local password (break-glass): type it into the on-screen field. Works
 //      even if Telegram / network is down. Hash is salted SHA-256, passed via
-//      env (MAC_VEIL_PWHASH + MAC_VEIL_SALT), never in argv.
+//      env (LOCKMAC_PWHASH + LOCKMAC_SALT), never in argv.
 //   2. Telegram `/veil off` → SIGTERM.
 //   3. --timeout N auto-dismiss (optional max-duration backstop).
 // Last-resort: SSH in and `kill` the process, or Force-Quit.
@@ -21,7 +21,7 @@
 // It is a PRIVACY screen, not a security lock: Force-Quit, SSH kill, or reboot
 // all dismiss it. Good against shoulder-surfing, not a determined attacker.
 //
-// Usage:  mac-veil [--timeout SECONDS] [--message TEXT]
+// Usage:  lockmac [--timeout SECONDS] [--message TEXT]
 import Cocoa
 import CryptoKit
 
@@ -30,8 +30,8 @@ func sha256Hex(_ s: String) -> String {
 }
 
 let env = ProcessInfo.processInfo.environment
-let expectedHash = env["MAC_VEIL_PWHASH"] ?? ""
-let salt = env["MAC_VEIL_SALT"] ?? ""
+let expectedHash = env["LOCKMAC_PWHASH"] ?? ""
+let salt = env["LOCKMAC_SALT"] ?? ""
 
 var timeout: Double = 0
 var message = "🔒 屏幕已遮挡"

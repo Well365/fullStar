@@ -254,20 +254,20 @@ def _handle_command(text: str) -> str:
         _run([str(ROOT / "mob-compose" / "scripts" / "shot-android.sh"), "-c", "解锁后"])
         return f"{out}\n（已截图发送确认）" if out else "已尝试解锁（截图已发）"
 
-    if cmd == "/veil":
-        # delegates to the standalone `mac-veil` package (CLI on PATH)
+    if cmd == "/lockmac":
+        # delegates to the standalone `lockmac` package (CLI on PATH)
         sub = args[0].lower() if args else "status"
         if sub == "on":
-            code, out = _run(["mac-veil", "on"])
+            code, out = _run(["lockmac", "on"])
             return f"{out}\n（旁人看物理屏=黑；你 /shot 截图仍拿真实内容）" if code == 0 else out
         if sub == "off":
-            return _run(["mac-veil", "off"])[1]
+            return _run(["lockmac", "off"])[1]
         if sub == "boot":
             val = args[1].lower() if len(args) > 1 else ""
             if val in ("on", "off"):
-                return _run(["mac-veil", "boot", val])[1]
-            return "用法: /veil boot on|off"
-        return _run(["mac-veil", "status"])[1] + "\n用法: /veil on | off | boot on|off"
+                return _run(["lockmac", "boot", val])[1]
+            return "用法: /lockmac boot on|off"
+        return _run(["lockmac", "status"])[1] + "\n用法: /lockmac on | off | boot on|off"
 
     if cmd == "/shot" and args:
         platform = args[0].lower()

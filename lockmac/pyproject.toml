@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mac-veil"
+name = "lockmac"
 version = "0.1.0"
 description = "Privacy veil for macOS: black out the screen (not a lock), with local-password / timeout dismissal and login autostart"
 readme = "README.md"
@@ -15,15 +15,15 @@ dependencies = []
 dev = ["pytest>=7.0"]
 
 [project.scripts]
-mac-veil = "mac_veil.cli:main"
-veilkit = "mac_veil.cli:main"
+lockmac = "lockmac.cli:main"
+veilkit = "lockmac.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["mac_veil*"]
+include = ["lockmac*"]
 
 [tool.setuptools.package-data]
-mac_veil = ["overlay.swift"]
+lockmac = ["overlay.swift"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,10 +1,10 @@
-"""mac-veil CLI: on | off | status | setup | passwd | boot | autostart."""
+"""lockmac CLI: on | off | status | setup | passwd | boot | autostart."""
 from __future__ import annotations
 
 import getpass
 import sys
 
-from mac_veil import core
+from lockmac import core
 
 
 def _setup_interactive() -> tuple[bool, str]:
@@ -69,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         ok, msg = core.uninstall_agent()
     else:
         ok, msg = False, (
-            f"usage: mac-veil on|off|status|setup|passwd|set-password|boot|"
+            f"usage: lockmac on|off|status|setup|passwd|set-password|boot|"
             f"install-agent|uninstall-agent (got {cmd!r})"
         )
     print(msg)

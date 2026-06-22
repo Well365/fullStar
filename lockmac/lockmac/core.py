@@ -1,10 +1,10 @@
-"""mac-veil core: build the Swift overlay, control it, manage password & boot.
+"""lockmac core: build the Swift overlay, control it, manage password & boot.
 
 Self-contained — no dependency on any host project. Paths follow XDG:
   overlay source : packaged alongside this module (overlay.swift)
-  compiled binary: ~/.cache/mac-veil/mac-veil
-  config         : ~/.config/mac-veil/config.json   (salted SHA-256 hash + boot flag)
-  pidfile        : ~/.cache/mac-veil/mac-veil.pid
+  compiled binary: ~/.cache/lockmac/lockmac
+  config         : ~/.config/lockmac/config.json   (salted SHA-256 hash + boot flag)
+  pidfile        : ~/.cache/lockmac/lockmac.pid
 
 Three dismissal paths so you can never get locked out:
   1. Local password (break-glass) — works with no network.
@@ -29,15 +29,15 @@ def _xdg(var: str, default: Path) -> Path:
 
 
 HOME = Path.home()
-CACHE_DIR = _xdg("XDG_CACHE_HOME", HOME / ".cache") / "mac-veil"
-CONFIG_DIR = _xdg("XDG_CONFIG_HOME", HOME / ".config") / "mac-veil"
+CACHE_DIR = _xdg("XDG_CACHE_HOME", HOME / ".cache") / "lockmac"
+CONFIG_DIR = _xdg("XDG_CONFIG_HOME", HOME / ".config") / "lockmac"
 
 SRC = Path(__file__).resolve().parent / "overlay.swift"
-BIN = CACHE_DIR / "mac-veil"
-PIDFILE = CACHE_DIR / "mac-veil.pid"
+BIN = CACHE_DIR / "lockmac"
+PIDFILE = CACHE_DIR / "lockmac.pid"
 CONFIG = CONFIG_DIR / "config.json"
 
-AGENT_LABEL = "com.mobremote.veil"
+AGENT_LABEL = "com.lockmac"
 AGENT_PLIST = HOME / "Library" / "LaunchAgents" / f"{AGENT_LABEL}.plist"
 
 
@@ -117,8 +117,8 @@ def _password_env() -> dict:
     cfg = load_config()
     env = dict(os.environ)
     if cfg.get("pwd_hash") and cfg.get("salt"):
-        env["MAC_VEIL_PWHASH"] = cfg["pwd_hash"]
-        env["MAC_VEIL_SALT"] = cfg["salt"]
+        env["LOCKMAC_PWHASH"] = cfg["pwd_hash"]
+        env["LOCKMAC_SALT"] = cfg["salt"]
     return env
 
 
@@ -163,7 +163,7 @@ def start(message: str | None = None, timeout: float = 0) -> tuple[bool, str]:
         binary = ensure_built()
     except (subprocess.CalledProcessError, OSError) as exc:
         return False, f"build failed: {exc}"
-    msg = message or os.environ.get("MAC_VEIL_MESSAGE") or None
+    msg = message or os.environ.get("LOCKMAC_MESSAGE") or None
     proc = subprocess.Popen(
         build_argv(binary, msg, timeout),
         stdin=subprocess.DEVNULL,
@@ -175,7 +175,7 @@ def start(message: str | None = None, timeout: float = 0) -> tuple[bool, str]:
     PIDFILE.parent.mkdir(parents=True, exist_ok=True)
     PIDFILE.write_text(str(proc.pid))
     has_pw = bool(load_config().get("pwd_hash"))
-    note = "" if has_pw else "（⚠ 未设本地密码，断网/无远程时只能 SSH/kill 解除——建议 mac-veil setup）"
+    note = "" if has_pw else "（⚠ 未设本地密码，断网/无远程时只能 SSH/kill 解除——建议 lockmac setup）"
     return True, f"veil up (pid {proc.pid}){note}"
 
 
@@ -199,16 +199,16 @@ def status() -> str:
     pw = "set" if cfg.get("pwd_hash") else "unset"
     boot = "on" if cfg.get("enable_on_boot") else "off"
     agent = "installed" if AGENT_PLIST.exists() else "not installed"
-    return f"veil: {up} · password: {pw} · boot-default: {boot} · autostart: {agent}"
+    return f"lockMac: {up} · password: {pw} · boot-default: {boot} · autostart: {agent}"
 
 
 # ───────────────────────── LaunchAgent (boot autostart) ─────────────────────────
 def _cli_path() -> list[str]:
-    """How the LaunchAgent should invoke us: prefer the installed `mac-veil`."""
-    found = shutil.which("mac-veil")
+    """How the LaunchAgent should invoke us: prefer the installed `lockmac`."""
+    found = shutil.which("lockmac")
     if found:
         return [found]
-    return [sys.executable, "-m", "mac_veil.cli"]
+    return [sys.executable, "-m", "lockmac.cli"]
 
 
 def _plist_xml() -> str:

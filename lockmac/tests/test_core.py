@@ -1,9 +1,9 @@
-"""Tests for mac_veil.core pure logic (no GUI / no swiftc)."""
+"""Tests for lockmac.core pure logic (no GUI / no swiftc)."""
 from pathlib import Path
 
 import pytest
 
-from mac_veil import core
+from lockmac import core
 
 
 def test_needs_build_when_binary_missing():
@@ -19,12 +19,12 @@ def test_no_build_when_binary_fresh():
 
 
 def test_build_argv_plain():
-    assert core.build_argv(Path("/x/mac-veil"), None, 0) == ["/x/mac-veil"]
+    assert core.build_argv(Path("/x/lockmac"), None, 0) == ["/x/lockmac"]
 
 
 def test_build_argv_with_timeout_and_message():
-    assert core.build_argv(Path("/x/mac-veil"), "hi", 8) == [
-        "/x/mac-veil", "--timeout", "8", "--message", "hi",
+    assert core.build_argv(Path("/x/lockmac"), "hi", 8) == [
+        "/x/lockmac", "--timeout", "8", "--message", "hi",
     ]
 
 
