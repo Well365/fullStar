@@ -2,6 +2,12 @@
 from lockmac import tg
 
 
+def test_menu_includes_core_commands():
+    cmds = [c for c, _ in tg._MENU]
+    for c in ("veil", "unveil", "lock", "status", "deadman", "purge"):
+        assert c in cmds
+
+
 def test_parse_command_known():
     assert tg.parse_command("/veil") == "veil"
     assert tg.parse_command("/unveil") == "unveil"

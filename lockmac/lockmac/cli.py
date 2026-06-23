@@ -47,7 +47,9 @@ def _tg_setup_interactive() -> tuple[bool, str]:
     if not chat:
         return False, "couldn't fetch chat id — message the bot first, then retry"
     tg.set_tg(token, chat)
-    return True, f"✓ Telegram bound (chat {chat}). Run `lockmac tg-listen` to enable remote control."
+    menu = "菜单已注册 ✓" if tg.set_my_commands() else "菜单注册失败(稍后 tg-listen 会重试)"
+    return True, (f"✓ Telegram bound (chat {chat})。{menu}\n"
+                  "Run `lockmac tg-listen` to enable remote control.")
 
 
 def main(argv: list[str] | None = None) -> int:

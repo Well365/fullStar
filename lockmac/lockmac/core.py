@@ -370,7 +370,16 @@ def _plist_xml() -> str:
     )
 
 
+def _precompile_quiet() -> None:
+    """Build the overlay now so login boot-start never blocks on a cold compile."""
+    try:
+        ensure_built()
+    except (subprocess.CalledProcessError, OSError):
+        pass  # swiftc missing → overlay compiles on first use instead
+
+
 def install_agent() -> tuple[bool, str]:
+    _precompile_quiet()  # avoid a slow first-boot compile
     AGENT_PLIST.parent.mkdir(parents=True, exist_ok=True)
     AGENT_PLIST.write_text(_plist_xml(), encoding="utf-8")
     uid = os.getuid()
@@ -421,6 +430,7 @@ def install_tg_agent() -> tuple[bool, str]:
     cfg = load_config()
     if not cfg.get("tg_token") or not cfg.get("tg_chat"):
         return False, "run `lockmac tg-setup` first (no token/chat configured)"
+    _precompile_quiet()  # avoid a slow first-boot compile
     TG_AGENT_PLIST.parent.mkdir(parents=True, exist_ok=True)
     TG_AGENT_PLIST.write_text(_tg_plist_xml(), encoding="utf-8")
     uid = os.getuid()

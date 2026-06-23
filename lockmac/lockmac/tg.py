@@ -92,6 +92,30 @@ def fetch_chat_id(token: str) -> str | None:
         return None
 
 
+# Commands shown in the Telegram "/" menu (registered via setMyCommands on listen).
+_MENU = [
+    ("veil", "开隐私遮罩（盖屏不锁机）"),
+    ("unveil", "解除遮罩（启用2FA则 /unveil <6位码>）"),
+    ("lock", "系统真锁屏（单向，需系统密码解）"),
+    ("status", "查看状态"),
+    ("deadman", "配置死手开关：<签到> <宽限> <动作> [失联]"),
+    ("purge", "删除清单：/purge add|list|clear"),
+]
+
+
+def set_my_commands() -> bool:
+    """Register the '/' command menu for the bound bot."""
+    token, _ = _creds()
+    if not token:
+        return False
+    cmds = json.dumps([{"command": c, "description": d} for c, d in _MENU])
+    try:
+        _api(token, "setMyCommands", {"commands": cmds}, timeout=15)
+        return True
+    except (urllib.error.URLError, OSError, ValueError):
+        return False
+
+
 def _dispatch(action: str, args: list[str] | None = None) -> str:
     args = args or []
     if action == "veil":
@@ -218,6 +242,7 @@ def listen(poll_timeout: int = 10) -> int:
         parts_desc.append(f"offline {offline}s")
     extra = (f" · {' · '.join(parts_desc)}→{action}") if parts_desc else ""
     print(f"lockmac tg-listen: polling (chat={chat}){extra}")
+    set_my_commands()  # register the "/" menu for the bot
     offset = 0
     last_sent = 0.0
     last_ack = time.time()
