@@ -8,6 +8,43 @@ Standalone: pure Python stdlib + a tiny Swift overlay. No Telegram, no host
 project required. (mob-remote integrates it for remote on/off, but lockmac
 works entirely on its own.)
 
+> 📐 Detailed design: **[docs/PHASE1.md](docs/PHASE1.md)** (implemented) ·
+> **[docs/PHASE2.md](docs/PHASE2.md)** (fleet, planned) · **[docs/FLEET_DESIGN.md](docs/FLEET_DESIGN.md)**
+
+## Architecture (single machine, implemented)
+
+```
+┌──────────────────────────── one Mac ────────────────────────────┐
+│  Configure (same config, either way)                             │
+│    CLI: lockmac deadman/purge/…   ⇄   Telegram: /deadman /purge…  │
+│                         │                    │  (tg-listen)       │
+│                         ▼                    ▼                    │
+│            ~/.config/lockmac/config.json                         │
+│            password · TOTP · times · action · purge list         │
+│                         │ read                                   │
+│                         ▼                                        │
+│            lockmac.core  (start/stop · system_lock ·             │
+│                           purge_dirs_now · verify pw/TOTP)       │
+│              │              │               │                    │
+│              ▼              ▼               ▼                    │
+│        overlay(Swift)   Ctrl-Cmd-Q      rm -rf (purge,           │
+│        veil+pw+TOTP     system lock     whitelist-guarded)       │
+│                                                                  │
+│  Daemon: tg-listen runs the dead-man timer (foreground/LaunchAgent)│
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Dead-man flow (auto-act if you go offline / don't respond)
+
+```
+tg-listen loop (re-reads config each pass)
+   ├ reach Telegram OK ─────────► last_online = now
+   ├ heartbeat due ─► send ✅ button ─► tapped? reset : grace passed → FIRE
+   └ offline check ─► now-last_online ≥ offline-timeout → FIRE  (local, works offline)
+                                  │
+                          action: lock | veil | purge
+```
+
 ## Why "veil" not "lock"
 
 - The overlay uses `CGShieldingWindowLevel` (above normal windows, covers the
