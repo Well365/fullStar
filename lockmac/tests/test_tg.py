@@ -49,7 +49,35 @@ def test_dispatch_unveil_wrong_totp_refused(tmp_path, monkeypatch):
     from lockmac import core, totp
     monkeypatch.setattr(core, "CONFIG", tmp_path / "config.json")
     core.set_totp_secret(totp.generate_secret())
-    assert "二步验证码" in tg._dispatch("unveil", "000000")
+    assert "二步验证码" in tg._dispatch("unveil", ["000000"])
+
+
+def test_dispatch_deadman_config_via_tg(tmp_path, monkeypatch):
+    from lockmac import core
+    monkeypatch.setattr(core, "CONFIG", tmp_path / "config.json")
+    out = tg._dispatch("deadman", ["0", "0", "purge", "3600"])
+    assert "已更新" in out
+    assert core.heartbeat_cfg() == (0, 0, "purge", 3600)
+
+
+def test_dispatch_deadman_show_via_tg(tmp_path, monkeypatch):
+    from lockmac import core
+    monkeypatch.setattr(core, "CONFIG", tmp_path / "config.json")
+    assert "dead-man" in tg._dispatch("deadman", [])
+
+
+def test_dispatch_purge_add_via_tg(tmp_path, monkeypatch):
+    from lockmac import core
+    monkeypatch.setattr(core, "CONFIG", tmp_path / "config.json")
+    out = tg._dispatch("purgecfg", ["add", str(tmp_path / "x")])
+    assert "已加入" in out
+    assert str(tmp_path / "x") in core.get_purge_dirs()
+
+
+def test_dispatch_purge_add_rejects_system_via_tg(tmp_path, monkeypatch):
+    from lockmac import core
+    monkeypatch.setattr(core, "CONFIG", tmp_path / "config.json")
+    assert "拒绝" in tg._dispatch("purgecfg", ["add", "/System/x"])
 
 
 def test_install_tg_agent_refuses_without_creds(tmp_path, monkeypatch):

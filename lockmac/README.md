@@ -84,6 +84,13 @@ chat id is honored, fail-closed):
 - `/veil` / `/unveil` — raise / dismiss the removable overlay
 - `/lock` — **real system lock** (one-way; you can lock remotely but must unlock
   at the machine with the system password)
+- `/deadman <签到秒> <宽限秒> <lock|veil|purge> [失联秒]` — configure the dead-man
+  timers from Telegram (no arg = show current). Takes effect **live** (tg-listen
+  re-reads config each loop, no restart needed).
+- `/purge add <path>` / `/purge list` / `/purge clear` — manage the purge list
+
+> All dead-man times are configurable from **either** the CLI (`lockmac deadman …`)
+> **or** Telegram (`/deadman …`) — they share the same config.
 
 Use `tg-listen` for a foreground run, or `tg-install` to keep it always-on.
 

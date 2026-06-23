@@ -30,6 +30,8 @@ _COMMANDS = {
     "/unveil": "unveil",
     "/lock": "syslock",
     "/status": "status",
+    "/deadman": "deadman",   # configure dead-man timers from Telegram
+    "/purge": "purgecfg",    # manage purge dir list from Telegram
 }
 
 
@@ -90,18 +92,61 @@ def fetch_chat_id(token: str) -> str | None:
         return None
 
 
-def _dispatch(action: str, arg: str = "") -> str:
+def _dispatch(action: str, args: list[str] | None = None) -> str:
+    args = args or []
     if action == "veil":
         return core.start()[1]
     if action == "unveil":
         if core.totp_enabled():
             from lockmac import totp
-            if not totp.verify_totp(core.get_totp_secret(), arg):
+            if not totp.verify_totp(core.get_totp_secret(), args[0] if args else ""):
                 return "需二步验证码：/unveil <6位码>"
         return core.stop()[1]
     if action == "syslock":
         return core.system_lock()[1]
+    if action == "deadman":
+        return _cfg_deadman(args)
+    if action == "purgecfg":
+        return _cfg_purge(args)
     return core.status()
+
+
+def _cfg_deadman(args: list[str]) -> str:
+    """/deadman [interval grace action [offline]] — show or set from Telegram."""
+    if not args:
+        iv, gr, ac, off = core.heartbeat_cfg()
+        return (f"dead-man: 签到{iv}s/宽限{gr}s · 失联{off}s · 动作{ac}\n"
+                "设置: /deadman <签到秒> <宽限秒> <lock|veil|purge> [失联秒]")
+    try:
+        iv = int(args[0])
+        gr = int(args[1]) if len(args) > 1 else 300
+        ac = args[2] if len(args) > 2 else "lock"
+        off = int(args[3]) if len(args) > 3 else 0
+        core.set_heartbeat(iv, gr, ac, off)
+        iv, gr, ac, off = core.heartbeat_cfg()
+        return f"✓ dead-man 已更新（即时生效）：签到{iv}s/宽限{gr}s · 失联{off}s · 动作{ac}"
+    except ValueError:
+        return "用法: /deadman <签到秒> <宽限秒> <lock|veil|purge> [失联秒]"
+
+
+def _cfg_purge(args: list[str]) -> str:
+    """/purge [add <path> | clear | list] — manage the purge dir list from Telegram."""
+    sub = args[0].lower() if args else "list"
+    if sub == "list" or not args:
+        return f"删除清单：{core.get_purge_dirs() or '(空)'}"
+    if sub == "clear":
+        core.set_purge_dirs([])
+        return "✓ 删除清单已清空"
+    if sub == "add" and len(args) > 1:
+        path = args[1]
+        if not core.is_safe_purge_path(path):
+            return f"拒绝：{path} 是危险/系统路径"
+        dirs = core.get_purge_dirs()
+        if path not in dirs:
+            dirs.append(path)
+            core.set_purge_dirs(dirs)
+        return f"✓ 已加入：{path}\n当前：{core.get_purge_dirs()}"
+    return "用法: /purge add <绝对路径> | list | clear"
 
 
 def send_heartbeat() -> bool:
@@ -178,6 +223,8 @@ def listen(poll_timeout: int = 10) -> int:
     last_ack = time.time()
     last_online = time.time()
     while True:
+        # re-read config each loop so /deadman changes from Telegram take effect live
+        interval, grace, action, offline = core.heartbeat_cfg()
         online = True
         try:
             resp = _api(token, "getUpdates",
@@ -196,9 +243,7 @@ def listen(poll_timeout: int = 10) -> int:
                 text = msg.get("text") or ""
                 act = parse_command(text)
                 if act:
-                    parts = text.split()
-                    arg = parts[1] if len(parts) > 1 else ""
-                    notify(_dispatch(act, arg))
+                    notify(_dispatch(act, text.split()[1:]))
             cb = item.get("callback_query")
             if cb and str(((cb.get("message") or {}).get("chat") or {}).get("id")) == str(chat):
                 if cb.get("data") == "hb_ack":
