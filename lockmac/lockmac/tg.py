@@ -32,6 +32,7 @@ _COMMANDS = {
     "/status": "status",
     "/deadman": "deadman",   # configure dead-man timers from Telegram
     "/purge": "purgecfg",    # manage purge dir list from Telegram
+    "/help": "help",
 }
 
 
@@ -100,7 +101,30 @@ _MENU = [
     ("status", "查看状态"),
     ("deadman", "配置死手开关：<签到> <宽限> <动作> [失联]"),
     ("purge", "删除清单：/purge add|list|clear"),
+    ("help", "命令详细说明"),
 ]
+
+_HELP = """🔒 lockmac 命令帮助
+
+【遮罩 / 锁定】
+/veil — 开隐私遮罩（盖屏防窥，不锁机；远程操作/截图照常）
+/unveil — 解除遮罩（启用 2FA 则 /unveil <6位码>）
+/lock — 系统真锁屏（⚠ 单向：能远程锁，但只能到机器前输系统密码解）
+/status — 查看状态（遮罩/密码/2FA/dead-man/绑定）
+
+【死手开关 dead-man（无响应/失联→自动执行）】
+/deadman — 查看当前配置
+/deadman <签到秒> <宽限秒> <lock|veil|purge> [失联秒]
+  · /deadman 0 0 purge 3600 → 连不上 TG 满 1 小时则删目录
+  · /deadman 1800 600 lock → 每30min签到，10min不点则系统锁
+  心跳来时点「✅ 我在」即重置计时
+
+【删除清单（purge 动作使用）】
+/purge list — 查看
+/purge add <绝对路径> — 加入（/、家目录、系统目录自动拒绝）
+/purge clear — 清空
+
+仅响应绑定的 chat（fail-closed）。本地用 `lockmac <命令>` 同样可操作。"""
 
 
 def set_my_commands() -> bool:
@@ -132,6 +156,8 @@ def _dispatch(action: str, args: list[str] | None = None) -> str:
         return _cfg_deadman(args)
     if action == "purgecfg":
         return _cfg_purge(args)
+    if action == "help":
+        return _HELP
     return core.status()
 
 
