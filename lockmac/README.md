@@ -75,7 +75,8 @@ lockmac setup            # set a password + choose login autostart (installs Lau
 lockmac veil             # raise the privacy overlay (screen black; you keep working)
 lockmac veil 30          # ...auto-dismiss after 30s (safety backstop)
 lockmac unveil           # dismiss the overlay
-lockmac lock             # REAL system lock — one-way, cannot be undone remotely
+lockmac lock             # REAL system lock + also raises the veil (double cover);
+                         #   one-way; set LOCKMAC_LOCK_NO_VEIL=1 to skip the veil
 lockmac status
 lockmac passwd           # change password (verifies the current one first)
 lockmac setup-2fa        # enable two-step (TOTP); unlock then needs password + 6-digit code

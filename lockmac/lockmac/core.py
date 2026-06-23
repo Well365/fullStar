@@ -304,13 +304,18 @@ def stop() -> tuple[bool, str]:
 
 def system_lock() -> tuple[bool, str]:
     """Real macOS screen lock (loginwindow). ONE-WAY: cannot be undone remotely —
-    you must enter the system password at the machine. Contrast with the veil,
-    which is a removable privacy overlay.
+    you must enter the system password at the machine.
 
+    By default ALSO raises the veil overlay, so the screen stays covered even
+    after the system unlock (double cover). Disable with LOCKMAC_LOCK_NO_VEIL=1.
     Override the lock command with LOCKMAC_SYSTEM_LOCK_CMD.
     """
     if sys.platform != "darwin":
         return False, "macOS only"
+    veil_note = ""
+    if os.environ.get("LOCKMAC_LOCK_NO_VEIL", "").strip().lower() not in ("1", "true", "yes", "on"):
+        start()  # raise overlay first; it stays up beneath/after the login window
+        veil_note = " + 遮罩"
     custom = os.environ.get("LOCKMAC_SYSTEM_LOCK_CMD", "").strip()
     if custom:
         rc = subprocess.run(custom, shell=True).returncode
@@ -323,10 +328,10 @@ def system_lock() -> tuple[bool, str]:
         capture_output=True, text=True,
     )
     if r.returncode == 0:
-        return True, "🔒 系统已锁屏（真锁；需系统密码解除，远程无法解）"
+        return True, f"🔒 系统已锁屏{veil_note}（真锁；需系统密码解除，远程无法解）"
     # Fallback: sleep the display — locks if "require password immediately" is set.
     subprocess.run(["pmset", "displaysleepnow"], capture_output=True)
-    return True, "🔒 系统已锁屏（displaysleep 兜底）"
+    return True, f"🔒 系统已锁屏{veil_note}（displaysleep 兜底）"
 
 
 def status() -> str:
